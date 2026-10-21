@@ -5,302 +5,95 @@
     <title>Library Statistics</title>
 </head>
 <body>
-<div id="LibraryStatisticsPage"
-     data-role="page"
-     class="page type-interior pluginConfigurationPage"
-     data-require="emby-button,emby-checkbox">
+<div class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-checkbox,emby-select"
+     data-role="page" id="LibraryStatisticsPage">
     <style>
         #LibraryStatisticsPage {
-            --ls-violet: #aa5cc3;
-            --ls-cyan: #00a4dc;
-            --ls-ink: rgba(16, 18, 24, .72);
-            --ls-line: rgba(255, 255, 255, .12);
-            --ls-muted: rgba(255, 255, 255, .67);
+            --color-primary:#00a4dc; --color-primary-hover:#0088b8; --color-primary-light:rgba(0,164,220,.15);
+            --color-success:#2ecc71; --color-warning:#e67e22; --color-purple:#9b59b6; --color-danger:#e74c3c;
+            --color-border:rgba(255,255,255,.1); --color-border-light:rgba(255,255,255,.06);
+            --color-border-strong:rgba(255,255,255,.16); --color-text-muted:rgba(255,255,255,.6);
+            --color-bg-subtle:rgba(255,255,255,.08); --color-bg-hover:rgba(255,255,255,.04);
+            --radius-sm:4px; --radius-md:6px; --radius-lg:8px;
         }
-
-        .ls-shell { max-width: 76rem; margin: 0 auto; padding: 1.4rem 1.2rem 5rem; }
-        .ls-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.2rem; }
-        .ls-title { margin: 0; font-size: clamp(2rem, 5vw, 3.6rem); line-height: .95; letter-spacing: -.045em; }
-        .ls-subtitle { max-width: 44rem; margin: .7rem 0 0; color: var(--ls-muted); line-height: 1.5; }
-        .ls-scan-button { flex: none; min-width: 10rem; }
-        .ls-scan-button[disabled] { opacity: .55; }
-        .ls-tabs { display: flex; gap: .35rem; overflow-x: auto; border-bottom: 1px solid var(--ls-line); margin-bottom: 1.5rem; }
-        .ls-tab { appearance: none; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--ls-muted); padding: .85rem 1rem .7rem; cursor: pointer; font: inherit; font-weight: 600; }
-        .ls-tab[aria-selected="true"] { color: #fff; border-color: var(--ls-cyan); }
-        .ls-panel[hidden] { display: none !important; }
-        .ls-status { min-height: 1.4rem; color: var(--ls-muted); margin: -.3rem 0 1.2rem; }
-        .ls-status.is-error { color: #ff9d9d; }
-        .ls-summary { display: grid; grid-template-columns: 1.4fr repeat(4, minmax(7.5rem, 1fr)); border: 1px solid var(--ls-line); background: var(--ls-ink); }
-        .ls-metric { min-width: 0; padding: 1.2rem; border-right: 1px solid var(--ls-line); }
-        .ls-metric:last-child { border-right: 0; }
-        .ls-metric strong { display: block; font-size: clamp(1.45rem, 3vw, 2.25rem); line-height: 1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-        .ls-metric span { display: block; margin-top: .5rem; color: var(--ls-muted); }
-        .ls-metric-primary strong { color: var(--ls-cyan); }
-        .ls-section-title { margin: 2rem 0 .8rem; font-size: 1.3rem; }
-        .ls-ledger { border: 1px solid var(--ls-line); background: var(--ls-ink); overflow-x: auto; }
-        .ls-table { width: 100%; border-collapse: collapse; min-width: 48rem; }
-        .ls-table th { text-align: left; color: var(--ls-muted); font-weight: 500; padding: .7rem 1rem; border-bottom: 1px solid var(--ls-line); }
-        .ls-table td { padding: .9rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, .07); font-variant-numeric: tabular-nums; }
-        .ls-table tr:last-child td { border-bottom: 0; }
-        .ls-library-name { font-weight: 650; }
-        .ls-library-type { color: var(--ls-muted); font-size: .85em; margin-top: .2rem; }
-        .ls-breakdowns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-        .ls-breakdown { border: 1px solid var(--ls-line); background: var(--ls-ink); padding: 1rem; }
-        .ls-breakdown h3 { margin: 0 0 1rem; font-size: 1.05rem; }
-        .ls-bar-row { display: grid; grid-template-columns: minmax(7rem, 1fr) 3fr auto; gap: .75rem; align-items: center; margin: .65rem 0; }
-        .ls-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .ls-bar-track { height: .48rem; background: rgba(255, 255, 255, .1); overflow: hidden; }
-        .ls-bar-fill { height: 100%; background: linear-gradient(90deg, var(--ls-violet), var(--ls-cyan)); }
-        .ls-bar-value { min-width: 6.5rem; text-align: right; color: var(--ls-muted); font-variant-numeric: tabular-nums; }
-        .ls-empty { border: 1px dashed var(--ls-line); padding: 2rem; color: var(--ls-muted); text-align: center; }
-        .ls-settings { max-width: 48rem; }
-        .ls-library-picker { border-top: 1px solid var(--ls-line); margin: 1.2rem 0; }
-        .ls-library-option { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem .2rem; border-bottom: 1px solid var(--ls-line); }
-        .ls-library-option label { display: flex; align-items: center; gap: .7rem; cursor: pointer; }
-        .ls-kind { color: var(--ls-muted); }
-        .ls-note { color: var(--ls-muted); line-height: 1.5; }
-        .ls-save { max-width: 18rem; }
-        .ls-spinner { display: inline-block; width: .85rem; height: .85rem; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: ls-spin .7s linear infinite; vertical-align: -.1rem; margin-right: .5rem; }
-        @keyframes ls-spin { to { transform: rotate(360deg); } }
-        @media (prefers-reduced-motion: reduce) { .ls-spinner { animation: none; } }
-        @media (max-width: 760px) {
-            .ls-head { align-items: stretch; flex-direction: column; }
-            .ls-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .ls-metric { border-bottom: 1px solid var(--ls-line); }
-            .ls-metric-primary { grid-column: 1 / -1; }
-            .ls-breakdowns { grid-template-columns: 1fr; }
-        }
+        .stats-container{max-width:960px;margin:1em auto}.stats-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5em;gap:.5em}.stats-header h2{margin:0}
+        .last-scan-badge{display:flex;align-items:center;gap:2px;font-size:.78em;color:var(--color-text-muted);background:var(--color-bg-subtle);padding:.3em .8em;border-radius:12px;white-space:nowrap;max-width:100%}
+        #lastScanBadge{overflow:hidden;text-overflow:ellipsis}.scan-libraries-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:0;border:0;border-radius:50%;color:var(--color-primary);cursor:pointer;background:transparent}.scan-libraries-btn:hover{background:var(--color-primary-light)}.scan-libraries-btn:disabled{color:#555;cursor:not-allowed}.scan-libraries-btn svg{width:18px;height:18px}.scan-libraries-btn.spinning svg{animation:refresh-spin .8s linear infinite}@keyframes refresh-spin{to{transform:rotate(360deg)}}
+        .tab-bar{display:flex;margin-bottom:1.5em;border-bottom:2px solid var(--color-border);overflow-x:auto}.tab-btn{display:flex;align-items:center;gap:.35em;padding:.65em 1.2em;border:0;background:transparent;color:inherit;cursor:pointer;font-size:.95em;opacity:.6;border-bottom:2px solid transparent;white-space:nowrap}.tab-btn:hover{opacity:.9}.tab-btn.active{opacity:1;border-bottom-color:var(--color-primary);font-weight:600}.tab-content{display:none}.tab-content.active{display:block}
+        .section-title{display:flex;align-items:center;gap:.35em;font-size:1.1em;font-weight:600;margin:2.2em 0 .5em;padding-bottom:.3em;border-bottom:2px solid var(--color-primary)}.tab-content>.section-title:first-child{margin-top:0}.help-text{font-size:.8em;opacity:.5;font-weight:400}
+        .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2em;margin-bottom:2em}.stat-card,.chart-box,.settings-card,.duplicate-group{background:rgba(255,255,255,.05);border:1px solid var(--color-border);border-radius:var(--radius-lg)}.stat-card{padding:1.2em 1.5em}.stat-card:hover,.duplicate-group:hover{border-color:rgba(0,164,220,.45)}.stat-label{font-size:.85em;color:var(--color-text-muted)}.stat-value{font-size:1.7em;font-weight:700;margin:.2em 0;font-variant-numeric:tabular-nums}.stat-detail{font-size:.8em;opacity:.5}
+        .library-row{display:grid;grid-template-columns:minmax(10em,2fr) repeat(5,minmax(5em,1fr));gap:.7em;padding:.75em .8em;border-bottom:1px solid var(--color-border-light);align-items:center}.library-row:last-child{border-bottom:0}.library-head{font-size:.78em;color:var(--color-text-muted)}.library-name{font-weight:600}.library-type{display:block;font-size:.75em;opacity:.5;margin-top:.15em}.library-value{font-variant-numeric:tabular-nums}
+        .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2em}.chart-box{padding:1em}.chart-title{display:flex;align-items:center;gap:.35em;font-weight:600;margin-bottom:.9em}.breakdown-row{display:grid;grid-template-columns:minmax(6.5em,1fr) 2fr auto;gap:.65em;align-items:center;padding:.35em 0;font-size:.85em}.breakdown-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.breakdown-track{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}.breakdown-fill{height:100%;background:var(--color-primary);border-radius:4px}.breakdown-value{color:var(--color-text-muted);font-variant-numeric:tabular-nums;text-align:right}
+        .duplicate-toolbar{display:grid;grid-template-columns:1fr 1fr 2fr;gap:.8em;margin-bottom:1.2em}.field-label{display:block;font-size:.8em;color:var(--color-text-muted);margin-bottom:.3em}.duplicate-toolbar select,.duplicate-toolbar input{box-sizing:border-box;width:100%;min-height:2.6em;padding:.45em .6em;border:1px solid var(--color-border-strong);border-radius:var(--radius-sm);background:rgba(255,255,255,.05);color:inherit;font:inherit;color-scheme:dark}
+        .duplicate-group{margin-bottom:1em;overflow:hidden}.duplicate-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1em;padding:.8em 1em;border-bottom:1px solid var(--color-border)}.duplicate-title{margin:0;font-size:1.05em}.duplicate-subtitle{margin-top:.2em;font-size:.82em;color:var(--color-text-muted)}.duplicate-meta{display:flex;gap:.35em;flex-wrap:wrap;margin-top:.45em}.badge{display:inline-block;padding:.15em .5em;border-radius:3px;font-size:.72em;font-weight:600;text-transform:uppercase;background:var(--color-primary);color:#fff}.badge-series{background:var(--color-success)}.badge-library{background:rgba(255,255,255,.1);color:inherit}.copy-count{color:var(--color-primary);font-weight:700;white-space:nowrap}
+        .version-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}.version-card{min-width:0;padding:1em;border-right:1px solid var(--color-border)}.version-card:last-child{border-right:0}.version-name{font-weight:600;margin-bottom:.5em}.media-path{display:block;box-sizing:border-box;width:100%;padding:.6em;background:rgba(0,0,0,.22);border:1px solid var(--color-border-light);border-radius:var(--radius-sm);font-family:monospace;font-size:.78em;color:#b9eaff;overflow-wrap:anywhere;user-select:text}.media-facts{display:flex;flex-wrap:wrap;gap:.35em .8em;margin:.7em 0;color:var(--color-text-muted);font-size:.82em}.stream-row{display:grid;grid-template-columns:4.5em minmax(0,1fr);gap:.5em;padding:.42em 0;border-top:1px solid var(--color-border-light);font-size:.8em}.stream-type{color:var(--color-primary);font-weight:600}.stream-detail{overflow-wrap:anywhere}
+        .filter-summary{min-height:1.4em;margin:.5em 0 1em;color:var(--color-text-muted);font-size:.85em}.no-data-container{text-align:center;padding:2em 1em;opacity:.5;font-size:.9em}.loading-overlay{text-align:center;padding:3em;opacity:.6}.spinner{display:inline-block;width:32px;height:32px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--color-primary);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+        .settings-form{width:100%}.settings-card{padding:.8em 1.1em 1.1em;margin-top:1.2em}.settings-card>.section-title:first-child{margin-top:0}.library-multiselect-panel{margin-top:.7em;border:1px solid var(--color-border-strong);border-radius:var(--radius-sm);background:rgba(30,30,30,.75);max-height:320px;overflow-y:auto;padding:.3em 0}.library-multiselect-item{display:flex;align-items:center;gap:.5em;padding:.45em .7em}.library-multiselect-item:hover{background:rgba(255,255,255,.06)}.library-multiselect-item label{display:flex;align-items:center;gap:.5em;margin:0;cursor:pointer;flex:1}.library-type-badge{font-size:.75em;opacity:.5;padding:.1em .4em;border-radius:3px;background:rgba(255,255,255,.06)}.action-btn{display:inline-flex;align-items:center;gap:.4em;padding:.55em 1.2em;border:0;border-radius:var(--radius-sm);color:#fff;cursor:pointer;font-size:.95em;background:var(--color-primary);margin-top:1em}.action-btn:hover{background:var(--color-primary-hover)}.status-msg{min-height:1.4em;font-size:.85em;color:var(--color-text-muted)}.status-msg.error{color:var(--color-danger)}
+        @media(prefers-color-scheme:light){#LibraryStatisticsPage{--color-border:rgba(0,0,0,.1);--color-border-light:rgba(0,0,0,.06);--color-border-strong:rgba(0,0,0,.16);--color-text-muted:rgba(0,0,0,.6);--color-bg-subtle:rgba(0,0,0,.06)}.stat-card,.chart-box,.settings-card,.duplicate-group{background:rgba(0,0,0,.025)}.duplicate-toolbar select,.duplicate-toolbar input{background:rgba(0,0,0,.04);color-scheme:light}.library-multiselect-panel{background:#fff}.media-path{background:rgba(0,0,0,.04);color:#006b91}}
+        @media(max-width:700px){.stats-grid,.charts-grid{grid-template-columns:1fr}.library-row{grid-template-columns:2fr 1fr 1fr}.library-row>*:nth-child(n+4){display:none}.duplicate-toolbar{grid-template-columns:1fr}.version-grid{grid-template-columns:1fr}.version-card{border-right:0;border-bottom:1px solid var(--color-border)}.stats-header{align-items:flex-start}}
+        @media(prefers-reduced-motion:reduce){.spinner,.scan-libraries-btn.spinning svg{animation:none}}
     </style>
 
-    <div data-role="content">
-        <div class="ls-shell">
-            <header class="ls-head">
-                <div>
-                    <h1 class="ls-title">Library Statistics</h1>
-                    <p class="ls-subtitle">A read-only inventory of the media Jellyfin already knows about. Excluded libraries never enter a scan.</p>
-                </div>
-                <button is="emby-button" type="button" class="raised button-submit ls-scan-button" id="lsScan">
-                    <span>Scan libraries</span>
-                </button>
-            </header>
-
-            <nav class="ls-tabs" aria-label="Library Statistics sections">
-                <button type="button" class="ls-tab" data-panel="overview" aria-selected="true">Overview</button>
-                <button type="button" class="ls-tab" data-panel="codecs" aria-selected="false">Codecs</button>
-                <button type="button" class="ls-tab" data-panel="settings" aria-selected="false">Settings</button>
-            </nav>
-
-            <div id="lsStatus" class="ls-status" aria-live="polite"></div>
-
-            <section id="lsPanelOverview" class="ls-panel">
-                <div id="lsOverviewEmpty" class="ls-empty">No scan yet. Choose any exclusions in Settings, then scan your libraries.</div>
-                <div id="lsOverview" hidden>
-                    <div class="ls-summary" id="lsSummary"></div>
-                    <h2 class="ls-section-title">Libraries</h2>
-                    <div class="ls-ledger">
-                        <table class="ls-table">
-                            <thead><tr><th>Library</th><th>Size</th><th>Files</th><th>Movies</th><th>Episodes</th><th>Audio</th></tr></thead>
-                            <tbody id="lsLibraryRows"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <section id="lsPanelCodecs" class="ls-panel" hidden>
-                <div id="lsCodecsEmpty" class="ls-empty">Run a scan to build codec and format statistics.</div>
-                <div id="lsBreakdowns" class="ls-breakdowns" hidden></div>
-            </section>
-
-            <section id="lsPanelSettings" class="ls-panel" hidden>
-                <form id="lsSettingsForm" class="ls-settings">
-                    <h2 class="ls-section-title" style="margin-top:0;">Excluded libraries</h2>
-                    <p class="ls-note">Checked libraries are omitted completely. Saving exclusions does not scan; run a new scan afterward to refresh the dashboard.</p>
-                    <div id="lsLibraryPicker" class="ls-library-picker"><div class="ls-empty">Loading libraries…</div></div>
-                    <button is="emby-button" type="submit" class="raised button-submit block ls-save"><span>Save exclusions</span></button>
-                </form>
-            </section>
+    <div data-role="content"><div class="content-primary stats-container">
+        <div class="stats-header"><h2>Library Statistics</h2><div class="last-scan-badge"><span id="lastScanBadge">No scan yet</span><button aria-label="Scan libraries" class="scan-libraries-btn" id="btnScanLibraries" title="Scan libraries"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.09 0-7.19 3.72-6.39 7.69L3 14.3V7h7.3L7.4 9.9C7.05 12.74 9.27 15.5 12 15.5c1.61 0 3.09-.84 3.92-2.21l2.19 1.26A7 7 0 0 1 12 18c-3.87 0-7-3.13-7-7 0-.34.02-.67.07-1L2 13.07V5h8.07L7.82 7.25A6.96 6.96 0 0 1 12 6c1.66 0 3.14.69 4.22 1.78L14 10h8V2l-2.35 2.35z"/></svg></button></div></div>
+        <div class="tab-bar" role="tablist">
+            <button class="tab-btn active" data-tab="overview" role="tab">Overview</button>
+            <button class="tab-btn" data-tab="duplicates" role="tab">Duplicates</button>
+            <button class="tab-btn" data-tab="formats" role="tab">Media formats</button>
+            <button class="tab-btn" data-tab="settings" role="tab">Settings</button>
         </div>
-    </div>
+        <div id="scanStatus" class="status-msg" aria-live="polite"></div>
+        <div id="loadingIndicator" class="loading-overlay" style="display:none"><div class="spinner"></div><p>Scanning indexed media and merged versions…</p></div>
+
+        <section id="tab-overview" class="tab-content active"><div id="overviewEmpty" class="no-data-container">Scan your libraries to see statistics.</div><div id="overviewResult" style="display:none"><div class="stats-grid" id="summaryCards"></div><div class="section-title">Libraries</div><div class="stat-card" style="padding:0;overflow-x:auto"><div class="library-row library-head"><span>Library</span><span>Storage</span><span>Files</span><span>Movies</span><span>Episodes</span><span>Audio</span></div><div id="libraryRows"></div></div></div></section>
+
+        <section id="tab-duplicates" class="tab-content">
+            <div class="section-title">Merged versions <span class="help-text">Jellyfin items with multiple media sources</span></div>
+            <div class="duplicate-toolbar">
+                <label><span class="field-label">Media type</span><select id="duplicateType"><option value="All">Movies and series</option><option value="Movie">Movies</option><option value="Series">Series</option></select></label>
+                <label><span class="field-label">Library</span><select id="duplicateLibrary"><option value="All">All libraries</option></select></label>
+                <label><span class="field-label">Search title or path</span><input id="duplicateSearch" is="emby-input" type="search" placeholder="Filter merged versions…"></label>
+            </div>
+            <div id="duplicateSummary" class="filter-summary">Run a scan to find merged versions.</div><div id="duplicateResults"></div>
+        </section>
+
+        <section id="tab-formats" class="tab-content"><div id="formatsEmpty" class="no-data-container">Scan your libraries to see media format statistics.</div><div id="formatsResult" class="charts-grid" style="display:none"></div></section>
+
+        <section id="tab-settings" class="tab-content"><form id="settingsForm" class="settings-form"><div class="settings-card"><div class="section-title">Excluded libraries</div><p class="help-text">Checked libraries are left out of statistics and duplicate detection. Save before starting the next scan.</p><div id="libraryPicker" class="library-multiselect-panel"><div class="no-data-container">Loading libraries…</div></div><button type="submit" class="action-btn"><span>Save settings</span></button></div></form></section>
+    </div></div>
 
     <script type="text/javascript">
-        (function () {
-            'use strict';
-            var pluginId = '102f0695-0752-4348-95ac-01f2825db6cb';
-
-            function page() { return document.querySelector('#LibraryStatisticsPage'); }
-            function pick(object, pascal) {
-                if (!object) return undefined;
-                var camel = pascal.charAt(0).toLowerCase() + pascal.slice(1);
-                return object[pascal] === undefined ? object[camel] : object[pascal];
+        (function(){'use strict';
+            var pluginId='102f0695-0752-4348-95ac-01f2825db6cb',scanResult=null;
+            function root(){return document.querySelector('#LibraryStatisticsPage');}
+            function pick(value,name){var camel=name.charAt(0).toLowerCase()+name.slice(1);return value&&value[name]!==undefined?value[name]:value&&value[camel];}
+            function list(value){return Array.isArray(value)?value:[];}
+            function esc(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+            function api(path,method){return ApiClient.ajax({type:method||'GET',url:ApiClient.getUrl('LibraryStatistics/'+path),dataType:'json'});}
+            function size(bytes){var n=Number(bytes)||0,u=['B','KB','MB','GB','TB','PB'],i=0;while(n>=1024&&i<u.length-1){n/=1024;i++;}return(i===0?n.toFixed(0):n.toFixed(n>=100?0:n>=10?1:2))+' '+u[i];}
+            function count(value){return(Number(value)||0).toLocaleString();}
+            function duration(ticks){var seconds=Math.round((Number(ticks)||0)/10000000);if(!seconds)return'Unknown runtime';var h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60);return h?h+'h '+m+'m':m+'m';}
+            function status(message,error){var node=root().querySelector('#scanStatus');node.textContent=message||'';node.classList.toggle('error',!!error);}
+            function showTab(name){root().querySelectorAll('.tab-btn').forEach(function(button){button.classList.toggle('active',button.dataset.tab===name);});root().querySelectorAll('.tab-content').forEach(function(panel){panel.classList.toggle('active',panel.id==='tab-'+name);});}
+            function statCard(label,value,detail){return'<div class="stat-card"><div class="stat-label">'+esc(label)+'</div><div class="stat-value">'+esc(value)+'</div><div class="stat-detail">'+esc(detail||'')+'</div></div>';}
+            function renderResult(result){scanResult=result;var total=pick(result,'Total')||{},libraries=list(pick(result,'Libraries')),duplicates=list(pick(result,'DuplicateGroups'));
+                root().querySelector('#overviewEmpty').style.display='none';root().querySelector('#overviewResult').style.display='block';root().querySelector('#formatsEmpty').style.display='none';root().querySelector('#formatsResult').style.display='grid';
+                var movies=duplicates.filter(function(group){return pick(group,'MediaType')==='Movie';}).length,series=duplicates.length-movies;
+                root().querySelector('#summaryCards').innerHTML=statCard('Measured storage',size(pick(total,'TotalSizeBytes')),count(pick(total,'MediaFileCount'))+' indexed media files')+statCard('Merged versions',count(duplicates.length),movies+' movies · '+series+' series episodes')+statCard('Movie files',count(pick(total,'MovieCount')),'Includes every merged source')+statCard('Episode files',count(pick(total,'EpisodeCount')),'Includes every merged source');
+                root().querySelector('#libraryRows').innerHTML=libraries.map(function(lib){return'<div class="library-row"><span class="library-name">'+esc(pick(lib,'LibraryName'))+'<span class="library-type">'+esc(pick(lib,'CollectionType'))+'</span></span><span class="library-value">'+size(pick(lib,'TotalSizeBytes'))+'</span><span class="library-value">'+count(pick(lib,'MediaFileCount'))+'</span><span class="library-value">'+count(pick(lib,'MovieCount'))+'</span><span class="library-value">'+count(pick(lib,'EpisodeCount'))+'</span><span class="library-value">'+count(pick(lib,'AudioCount'))+'</span></div>';}).join('');
+                var groups=[['Containers','Containers'],['Resolutions','Resolution'],['VideoCodecs','Video codecs'],['AudioCodecs','Audio codecs'],['DynamicRanges','Dynamic range']];root().querySelector('#formatsResult').innerHTML=groups.map(function(group){return breakdown(group[1],list(pick(total,group[0])));}).join('');
+                var librarySelect=root().querySelector('#duplicateLibrary'),selected=librarySelect.value;librarySelect.innerHTML='<option value="All">All libraries</option>'+libraries.map(function(lib){var name=pick(lib,'LibraryName');return'<option value="'+esc(name)+'">'+esc(name)+'</option>';}).join('');if(Array.prototype.some.call(librarySelect.options,function(option){return option.value===selected;}))librarySelect.value=selected;
+                renderDuplicates();var stamp=new Date(pick(result,'ScannedAtUtc'));root().querySelector('#lastScanBadge').textContent='Scan: '+stamp.toLocaleString();status('Scanned '+libraries.length+' '+(libraries.length===1?'library':'libraries')+' in '+((Number(pick(result,'DurationMilliseconds'))||0)/1000).toFixed(1)+' seconds.');
             }
-            function esc(value) {
-                return String(value === undefined || value === null ? '' : value)
-                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-            }
-            function api(path, method) {
-                return ApiClient.ajax({
-                    type: method || 'GET',
-                    url: ApiClient.getUrl('LibraryStatistics/' + path),
-                    dataType: 'json'
-                });
-            }
-            function size(bytes) {
-                var value = Number(bytes) || 0;
-                var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-                var unit = 0;
-                while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
-                return (unit === 0 ? value.toFixed(0) : value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)) + ' ' + units[unit];
-            }
-            function count(value) { return (Number(value) || 0).toLocaleString(); }
-            function list(value) { return Array.isArray(value) ? value : []; }
-            function setStatus(message, error) {
-                var node = page().querySelector('#lsStatus');
-                node.textContent = message || '';
-                node.classList.toggle('is-error', !!error);
-            }
-            function showPanel(name) {
-                page().querySelectorAll('.ls-tab').forEach(function (tab) {
-                    tab.setAttribute('aria-selected', String(tab.getAttribute('data-panel') === name));
-                });
-                ['Overview', 'Codecs', 'Settings'].forEach(function (panel) {
-                    page().querySelector('#lsPanel' + panel).hidden = panel.toLowerCase() !== name;
-                });
-            }
-            function metric(value, label, primary) {
-                return '<div class="ls-metric' + (primary ? ' ls-metric-primary' : '') + '"><strong>'
-                    + esc(value) + '</strong><span>' + esc(label) + '</span></div>';
-            }
-            function renderResult(result) {
-                var total = pick(result, 'Total') || {};
-                var libraries = list(pick(result, 'Libraries'));
-                page().querySelector('#lsOverviewEmpty').hidden = true;
-                page().querySelector('#lsOverview').hidden = false;
-                page().querySelector('#lsCodecsEmpty').hidden = true;
-                page().querySelector('#lsBreakdowns').hidden = false;
-                page().querySelector('#lsSummary').innerHTML =
-                    metric(size(pick(total, 'TotalSizeBytes')), 'measured storage', true)
-                    + metric(count(pick(total, 'MediaFileCount')), 'media files')
-                    + metric(count(pick(total, 'MovieCount')), 'movies')
-                    + metric(count(pick(total, 'EpisodeCount')), 'episodes')
-                    + metric(count(pick(total, 'AudioCount')), 'audio tracks');
-                page().querySelector('#lsLibraryRows').innerHTML = libraries.map(function (library) {
-                    return '<tr><td><div class="ls-library-name">' + esc(pick(library, 'LibraryName')) + '</div>'
-                        + '<div class="ls-library-type">' + esc(pick(library, 'CollectionType')) + '</div></td>'
-                        + '<td>' + size(pick(library, 'TotalSizeBytes')) + '</td>'
-                        + '<td>' + count(pick(library, 'MediaFileCount')) + '</td>'
-                        + '<td>' + count(pick(library, 'MovieCount')) + '</td>'
-                        + '<td>' + count(pick(library, 'EpisodeCount')) + '</td>'
-                        + '<td>' + count(pick(library, 'AudioCount')) + '</td></tr>';
-                }).join('');
-                var groups = [
-                    ['Containers', 'Containers'], ['Resolutions', 'Resolution'],
-                    ['VideoCodecs', 'Video codecs'], ['AudioCodecs', 'Audio codecs'],
-                    ['DynamicRanges', 'Dynamic range']
-                ];
-                page().querySelector('#lsBreakdowns').innerHTML = groups.map(function (group) {
-                    return breakdown(group[1], list(pick(total, group[0])));
-                }).join('');
-                var stamp = new Date(pick(result, 'ScannedAtUtc'));
-                var elapsed = Number(pick(result, 'DurationMilliseconds')) || 0;
-                setStatus('Last scan: ' + stamp.toLocaleString() + ' · ' + (elapsed / 1000).toFixed(1) + ' seconds · '
-                    + libraries.length + ' included ' + (libraries.length === 1 ? 'library' : 'libraries'));
-            }
-            function breakdown(title, entries) {
-                if (!entries.length) {
-                    return '<section class="ls-breakdown"><h3>' + esc(title) + '</h3><div class="ls-note">No data.</div></section>';
-                }
-                var maximum = Math.max.apply(null, entries.map(function (entry) { return Number(pick(entry, 'SizeBytes')) || 0; }));
-                if (!maximum) maximum = Math.max.apply(null, entries.map(function (entry) { return Number(pick(entry, 'Count')) || 0; }));
-                var rows = entries.slice(0, 12).map(function (entry) {
-                    var bytes = Number(pick(entry, 'SizeBytes')) || 0;
-                    var value = bytes || Number(pick(entry, 'Count')) || 0;
-                    var percent = maximum ? Math.max(2, value / maximum * 100) : 0;
-                    return '<div class="ls-bar-row" title="' + esc(pick(entry, 'Label')) + '">'
-                        + '<span class="ls-bar-label">' + esc(pick(entry, 'Label')) + '</span>'
-                        + '<span class="ls-bar-track"><span class="ls-bar-fill" style="width:' + percent.toFixed(2) + '%"></span></span>'
-                        + '<span class="ls-bar-value">' + count(pick(entry, 'Count')) + ' · ' + size(bytes) + '</span></div>';
-                }).join('');
-                return '<section class="ls-breakdown"><h3>' + esc(title) + '</h3>' + rows + '</section>';
-            }
-            function loadLatest() {
-                return api('Latest').then(function (result) {
-                    if (result) renderResult(result);
-                }, function (error) {
-                    if (!error || error.status !== 204) setStatus('The saved scan result could not be loaded.', true);
-                });
-            }
-            function loadLibraries() {
-                return api('Libraries').then(function (libraries) {
-                    var picker = page().querySelector('#lsLibraryPicker');
-                    if (!libraries || !libraries.length) {
-                        picker.innerHTML = '<div class="ls-empty">Jellyfin has no media libraries to scan.</div>';
-                        return;
-                    }
-                    picker.innerHTML = libraries.map(function (library) {
-                        var id = pick(library, 'Id');
-                        return '<div class="ls-library-option"><label><input is="emby-checkbox" type="checkbox" '
-                            + 'class="ls-exclusion" value="' + esc(id) + '"' + (pick(library, 'Excluded') ? ' checked' : '') + ' />'
-                            + '<span>' + esc(pick(library, 'Name')) + '</span></label><span class="ls-kind">'
-                            + esc(pick(library, 'CollectionType')) + '</span></div>';
-                    }).join('');
-                }, function () {
-                    page().querySelector('#lsLibraryPicker').innerHTML = '<div class="ls-empty">Libraries could not be loaded.</div>';
-                });
-            }
-            function scan() {
-                var button = page().querySelector('#lsScan');
-                button.disabled = true;
-                button.querySelector('span').innerHTML = '<span class="ls-spinner"></span>Scanning…';
-                setStatus('Reading Jellyfin media metadata and measuring files…');
-                api('Scan', 'POST').then(function (result) {
-                    renderResult(result);
-                    showPanel('overview');
-                }, function (error) {
-                    var message = error && error.status === 409
-                        ? 'A scan is already running.'
-                        : 'The scan failed. Check the Jellyfin server log for details.';
-                    setStatus(message, true);
-                }).then(function () {
-                    button.disabled = false;
-                    button.querySelector('span').textContent = 'Scan libraries';
-                });
-            }
-            function save(e) {
-                e.preventDefault();
-                Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                    config.ExcludedLibraryIds = Array.prototype.map.call(
-                        page().querySelectorAll('.ls-exclusion:checked'),
-                        function (input) { return input.value; });
-                    return ApiClient.updatePluginConfiguration(pluginId, config);
-                }).then(function (result) {
-                    Dashboard.processPluginConfigurationUpdateResult(result);
-                    setStatus('Exclusions saved. Run a scan to refresh the dashboard.');
-                    return loadLibraries();
-                }, function () {
-                    Dashboard.hideLoadingMsg();
-                    setStatus('Exclusions could not be saved.', true);
-                });
-                return false;
-            }
-            function initialize() {
-                page().querySelectorAll('.ls-tab').forEach(function (tab) {
-                    tab.addEventListener('click', function () { showPanel(tab.getAttribute('data-panel')); });
-                });
-                page().querySelector('#lsScan').addEventListener('click', scan);
-                page().querySelector('#lsSettingsForm').addEventListener('submit', save);
-            }
-
-            var root = document.querySelector('#LibraryStatisticsPage');
-            if (!root.dataset.lsInitialized) {
-                root.dataset.lsInitialized = 'true';
-                initialize();
-            }
-            root.addEventListener('pageshow', function () {
-                loadLibraries();
-                loadLatest();
-            });
+            function breakdown(title,entries){if(!entries.length)return'<div class="chart-box"><div class="chart-title">'+esc(title)+'</div><div class="no-data-container">No data</div></div>';var maximum=Math.max.apply(null,entries.map(function(entry){return Number(pick(entry,'SizeBytes'))||Number(pick(entry,'Count'))||0;}));return'<div class="chart-box"><div class="chart-title">'+esc(title)+'</div>'+entries.slice(0,12).map(function(entry){var bytes=Number(pick(entry,'SizeBytes'))||0,value=bytes||Number(pick(entry,'Count'))||0,percent=maximum?Math.max(2,value/maximum*100):0;return'<div class="breakdown-row"><span class="breakdown-label">'+esc(pick(entry,'Label'))+'</span><span class="breakdown-track"><span class="breakdown-fill" style="width:'+percent.toFixed(2)+'%"></span></span><span class="breakdown-value">'+count(pick(entry,'Count'))+' · '+size(bytes)+'</span></div>';}).join('')+'</div>';}
+            function streamText(stream){var bits=[pick(stream,'DisplayTitle'),pick(stream,'Codec')],w=pick(stream,'Width'),h=pick(stream,'Height'),channels=pick(stream,'Channels'),bitrate=pick(stream,'BitRate');if(w&&h)bits.push(w+'×'+h);if(channels)bits.push(channels+' ch');if(bitrate)bits.push(Math.round(bitrate/1000)+' kbps');if(pick(stream,'Language'))bits.push(pick(stream,'Language'));if(pick(stream,'VideoRange'))bits.push(pick(stream,'VideoRange'));if(pick(stream,'IsDefault'))bits.push('default');if(pick(stream,'IsForced'))bits.push('forced');return bits.filter(function(value,index,array){return value&&array.indexOf(value)===index;}).join(' · ');}
+            function versionHtml(version,index){var streams=list(pick(version,'Streams')).map(function(stream){return'<div class="stream-row"><span class="stream-type">'+esc(pick(stream,'Type'))+'</span><span class="stream-detail">'+esc(streamText(stream))+'</span></div>';}).join('');return'<article class="version-card"><div class="version-name">'+esc(pick(version,'Name')||'Version '+(index+1))+'</div><code class="media-path">'+esc(pick(version,'Path')||'No indexed path')+'</code><div class="media-facts"><span>'+esc(pick(version,'Container'))+'</span><span>'+size(pick(version,'SizeBytes'))+'</span><span>'+duration(pick(version,'RunTimeTicks'))+'</span></div>'+(streams||'<div class="no-data-container">No MediaInfo streams</div>')+'</article>';}
+            function renderDuplicates(){var target=root().querySelector('#duplicateResults'),summary=root().querySelector('#duplicateSummary');if(!scanResult){target.innerHTML='';return;}var type=root().querySelector('#duplicateType').value,library=root().querySelector('#duplicateLibrary').value,needle=root().querySelector('#duplicateSearch').value.trim().toLowerCase();var groups=list(pick(scanResult,'DuplicateGroups')).filter(function(group){var versions=list(pick(group,'Versions')),haystack=[pick(group,'Title'),pick(group,'Subtitle'),pick(group,'LibraryName')].concat(versions.map(function(version){return pick(version,'Path');})).join(' ').toLowerCase();return(type==='All'||pick(group,'MediaType')===type)&&(library==='All'||pick(group,'LibraryName')===library)&&(!needle||haystack.indexOf(needle)!==-1);});summary.textContent=groups.length+' merged-version '+(groups.length===1?'item':'items')+' shown';if(!groups.length){target.innerHTML='<div class="no-data-container">No merged versions match these filters.</div>';return;}target.innerHTML=groups.map(function(group){var versions=list(pick(group,'Versions')),mediaType=pick(group,'MediaType'),year=pick(group,'ProductionYear');return'<section class="duplicate-group"><header class="duplicate-head"><div><h3 class="duplicate-title">'+esc(pick(group,'Title'))+(year?' ('+esc(year)+')':'')+'</h3>'+(pick(group,'Subtitle')?'<div class="duplicate-subtitle">'+esc(pick(group,'Subtitle'))+'</div>':'')+'<div class="duplicate-meta"><span class="badge '+(mediaType==='Series'?'badge-series':'')+'">'+esc(mediaType)+'</span><span class="badge badge-library">'+esc(pick(group,'LibraryName'))+'</span></div></div><div class="copy-count">'+versions.length+' versions</div></header><div class="version-grid">'+versions.map(versionHtml).join('')+'</div></section>';}).join('');}
+            function scan(){var button=root().querySelector('#btnScanLibraries');button.disabled=true;button.classList.add('spinning');root().querySelector('#loadingIndicator').style.display='block';status('Scanning…');api('Scan','POST').then(function(result){renderResult(result);showTab('overview');},function(error){status(error&&error.status===409?'A scan is already running.':'The scan failed. Check the Jellyfin server log.',true);}).then(function(){button.disabled=false;button.classList.remove('spinning');root().querySelector('#loadingIndicator').style.display='none';});}
+            function loadLatest(){api('Latest').then(function(result){if(result)renderResult(result);},function(error){if(!error||error.status!==204)status('The saved scan result could not be loaded.',true);});}
+            function loadLibraries(){api('Libraries').then(function(libraries){root().querySelector('#libraryPicker').innerHTML=list(libraries).map(function(lib){return'<div class="library-multiselect-item"><label><input is="emby-checkbox" class="library-exclusion" type="checkbox" value="'+esc(pick(lib,'Id'))+'"'+(pick(lib,'Excluded')?' checked':'')+'><span>'+esc(pick(lib,'Name'))+'</span></label><span class="library-type-badge">'+esc(pick(lib,'CollectionType'))+'</span></div>';}).join('')||'<div class="no-data-container">No libraries found.</div>';},function(){root().querySelector('#libraryPicker').innerHTML='<div class="no-data-container">Libraries could not be loaded.</div>';});}
+            function save(event){event.preventDefault();Dashboard.showLoadingMsg();ApiClient.getPluginConfiguration(pluginId).then(function(config){config.ExcludedLibraryIds=Array.prototype.map.call(root().querySelectorAll('.library-exclusion:checked'),function(input){return input.value;});return ApiClient.updatePluginConfiguration(pluginId,config);}).then(function(result){Dashboard.processPluginConfigurationUpdateResult(result);status('Settings saved. Run a scan to apply the new exclusions.');loadLibraries();},function(){Dashboard.hideLoadingMsg();status('Settings could not be saved.',true);});return false;}
+            var page=root();if(!page.dataset.initialized){page.dataset.initialized='true';page.querySelectorAll('.tab-btn').forEach(function(button){button.addEventListener('click',function(){showTab(button.dataset.tab);});});page.querySelector('#btnScanLibraries').addEventListener('click',scan);page.querySelector('#settingsForm').addEventListener('submit',save);['#duplicateType','#duplicateLibrary'].forEach(function(selector){page.querySelector(selector).addEventListener('change',renderDuplicates);});page.querySelector('#duplicateSearch').addEventListener('input',renderDuplicates);}page.addEventListener('pageshow',function(){loadLibraries();loadLatest();});
         })();
     </script>
 </div>

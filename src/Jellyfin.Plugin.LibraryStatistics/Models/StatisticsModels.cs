@@ -79,6 +79,90 @@ public sealed class LibraryScanStatistics : StatisticsSummary
     public string CollectionType { get; set; } = "mixed";
 }
 
+/// <summary>One video, audio, or subtitle stream belonging to a media version.</summary>
+public sealed class MediaStreamDetail
+{
+    /// <summary>Gets or sets the stream type.</summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the stream codec.</summary>
+    public string Codec { get; set; } = "Unknown";
+
+    /// <summary>Gets or sets Jellyfin's display title.</summary>
+    public string DisplayTitle { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the language code.</summary>
+    public string Language { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the video width.</summary>
+    public int? Width { get; set; }
+
+    /// <summary>Gets or sets the video height.</summary>
+    public int? Height { get; set; }
+
+    /// <summary>Gets or sets the channel count.</summary>
+    public int? Channels { get; set; }
+
+    /// <summary>Gets or sets the stream bitrate.</summary>
+    public int? BitRate { get; set; }
+
+    /// <summary>Gets or sets the video dynamic-range label.</summary>
+    public string VideoRange { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether the stream is the default.</summary>
+    public bool IsDefault { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the stream is forced.</summary>
+    public bool IsForced { get; set; }
+}
+
+/// <summary>One Jellyfin media source inside a merged-version item.</summary>
+public sealed class MediaVersionDetail
+{
+    /// <summary>Gets or sets Jellyfin's version name.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the exact indexed filesystem path.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the media container.</summary>
+    public string Container { get; set; } = "Unknown";
+
+    /// <summary>Gets or sets the measured or indexed file size.</summary>
+    public long SizeBytes { get; set; }
+
+    /// <summary>Gets or sets the runtime in ticks.</summary>
+    public long? RunTimeTicks { get; set; }
+
+    /// <summary>Gets or sets the relevant MediaInfo streams.</summary>
+    public List<MediaStreamDetail> Streams { get; set; } = [];
+}
+
+/// <summary>A Jellyfin item with more than one merged media version.</summary>
+public sealed class DuplicateGroup
+{
+    /// <summary>Gets or sets the Jellyfin item id.</summary>
+    public Guid ItemId { get; set; }
+
+    /// <summary>Gets or sets Movie or Series.</summary>
+    public string MediaType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the movie or series title.</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the episode label for a series result.</summary>
+    public string Subtitle { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the production year.</summary>
+    public int? ProductionYear { get; set; }
+
+    /// <summary>Gets or sets the containing library.</summary>
+    public string LibraryName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets Jellyfin's merged media versions.</summary>
+    public List<MediaVersionDetail> Versions { get; set; } = [];
+}
+
 /// <summary>The complete result of a library scan.</summary>
 public sealed class StatisticsResult
 {
@@ -93,4 +177,7 @@ public sealed class StatisticsResult
 
     /// <summary>Gets or sets per-library statistics.</summary>
     public List<LibraryScanStatistics> Libraries { get; set; } = [];
+
+    /// <summary>Gets or sets movie and series-episode items with merged media versions.</summary>
+    public List<DuplicateGroup> DuplicateGroups { get; set; } = [];
 }

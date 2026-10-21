@@ -4,13 +4,15 @@
 
 Create a small Jellyfin 10.11.11 plugin that keeps only the useful, read-only library-analysis idea from Jellyfin Helper.
 
-## Version 1 scope
+## Version 1.1 scope
 
-- Admin-only Overview, Codecs, and Settings page.
+- Admin-only Overview, Duplicates, Media formats, and Settings page.
 - Manual scans of Jellyfin-indexed video and audio items.
 - Stable library-ID exclusions, including mixed and music libraries.
 - Overall and per-library storage and media counts.
 - Container, resolution, video codec, audio codec, and dynamic-range breakdowns.
+- Duplicate filtering based on Jellyfin's own merged movie and episode versions.
+- Exact paths and per-version video, audio, and subtitle MediaInfo.
 - Latest scan persisted across Jellyfin restarts.
 - No scheduled jobs, filesystem cleanup, recommendations, watch history, Arr/Seerr, or web-client injection.
 
