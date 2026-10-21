@@ -13,7 +13,7 @@
         "changelog": "Adds Jellyfin Helper-style category cards, storage distribution, a storage-based per-library breakdown, and per-library media-format charts.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.4.0/library-statistics_1.1.4.0.zip",
-        "checksum": "RELEASE_WORKFLOW_WILL_UPDATE",
+        "checksum": "9dbeba4f6f9c30cb70e966ec9d8e6249",
         "timestamp": "2026-10-21T00:00:00Z"
       },
       {
