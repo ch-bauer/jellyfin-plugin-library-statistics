@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Reuses Jellyfin Helper's fixed donut-chart layout and arc renderer, restores scrolling throughout the dashboard, and adds a growth timeline plus latest/largest movie and series views.",
+  "changelog": "Expands duplicate detection beyond merged versions using provider IDs and conservative title/year or episode-coordinate matching, while still requiring distinct media paths.",
   "description": "Scan selected Jellyfin libraries, inspect media statistics and trends, browse the latest or largest titles, and compare merged versions with paths and MediaInfo.",
   "guid": "102f0695-0752-4348-95ac-01f2825db6cb",
   "name": "Library Statistics",
@@ -8,7 +8,7 @@
   "owner": "Christian",
   "targetAbi": "10.11.11.0",
   "timestamp": "2026-10-21T00:00:00.000Z",
-  "version": "1.1.2.0",
+  "version": "1.1.3.0",
   "status": "Active",
   "autoUpdate": false
 }

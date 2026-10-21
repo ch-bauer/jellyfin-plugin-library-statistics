@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/ch-bauer/jellyfin-plugin-library-statistics/main/images/icon.png",
     "versions": [
       {
+        "version": "1.1.3.0",
+        "changelog": "Expands duplicate detection beyond merged versions using provider IDs and conservative title/year or episode-coordinate matching, while still requiring distinct media paths.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.3.0/library-statistics_1.1.3.0.zip",
+        "checksum": "RELEASE_WORKFLOW_WILL_UPDATE",
+        "timestamp": "2026-10-21T00:00:00Z"
+      },
+      {
         "version": "1.1.2.0",
         "changelog": "Reuses Jellyfin Helper's fixed donut-chart layout and arc renderer, restores scrolling throughout the dashboard, and adds a growth timeline plus latest/largest movie and series views.",
         "targetAbi": "10.11.11.0",
