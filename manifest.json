@@ -2,12 +2,20 @@
   {
     "guid": "102f0695-0752-4348-95ac-01f2825db6cb",
     "name": "Library Statistics",
-    "description": "Scans selected Jellyfin libraries, charts formats and growth, shows latest and largest titles, and compares merged versions with exact paths and MediaInfo.",
-    "overview": "Library statistics, trends, media insights and merged-version analysis.",
+    "description": "Scans selected Jellyfin libraries, charts storage, formats and growth, shows latest and largest titles, and compares duplicate versions with exact paths and MediaInfo.",
+    "overview": "Library storage statistics, per-library formats, trends, media insights and duplicate analysis.",
     "owner": "Christian",
     "category": "General",
     "imageUrl": "https://raw.githubusercontent.com/ch-bauer/jellyfin-plugin-library-statistics/main/images/icon.png",
     "versions": [
+      {
+        "version": "1.1.4.0",
+        "changelog": "Adds Jellyfin Helper-style category cards, storage distribution, a storage-based per-library breakdown, and per-library media-format charts.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.4.0/library-statistics_1.1.4.0.zip",
+        "checksum": "RELEASE_WORKFLOW_WILL_UPDATE",
+        "timestamp": "2026-10-21T00:00:00Z"
+      },
       {
         "version": "1.1.3.0",
         "changelog": "Expands duplicate detection beyond merged versions using provider IDs and conservative title/year or episode-coordinate matching, while still requiring distinct media paths.",
