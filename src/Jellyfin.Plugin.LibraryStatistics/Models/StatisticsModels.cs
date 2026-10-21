@@ -27,6 +27,9 @@ public sealed class BreakdownEntry
 
     /// <summary>Gets or sets the total bytes of matching media items.</summary>
     public long SizeBytes { get; set; }
+
+    /// <summary>Gets or sets the distinct files represented by this entry.</summary>
+    public List<string> Paths { get; set; } = [];
 }
 
 /// <summary>Common counters for a scan or one library.</summary>
@@ -62,6 +65,39 @@ public class StatisticsSummary
     /// <summary>Gets or sets measured audio bytes.</summary>
     public long AudioSizeBytes { get; set; }
 
+    /// <summary>Gets or sets the total number of scanned media and sidecar files.</summary>
+    public int TotalFileCount { get; set; }
+
+    /// <summary>Gets or sets external subtitle bytes.</summary>
+    public long SubtitleSizeBytes { get; set; }
+
+    /// <summary>Gets or sets the external subtitle-file count.</summary>
+    public int SubtitleFileCount { get; set; }
+
+    /// <summary>Gets or sets image bytes.</summary>
+    public long ImageSizeBytes { get; set; }
+
+    /// <summary>Gets or sets the image-file count.</summary>
+    public int ImageFileCount { get; set; }
+
+    /// <summary>Gets or sets alongside-media trickplay bytes.</summary>
+    public long TrickplaySizeBytes { get; set; }
+
+    /// <summary>Gets or sets the trickplay-folder count.</summary>
+    public int TrickplayFolderCount { get; set; }
+
+    /// <summary>Gets or sets NFO/XML metadata bytes.</summary>
+    public long MetadataSizeBytes { get; set; }
+
+    /// <summary>Gets or sets the metadata-file count.</summary>
+    public int MetadataFileCount { get; set; }
+
+    /// <summary>Gets or sets bytes for remaining sidecar files.</summary>
+    public long OtherFileSizeBytes { get; set; }
+
+    /// <summary>Gets or sets the remaining sidecar-file count.</summary>
+    public int OtherFileCount { get; set; }
+
     /// <summary>Gets or sets container statistics.</summary>
     public List<BreakdownEntry> Containers { get; set; } = [];
 
@@ -74,8 +110,23 @@ public class StatisticsSummary
     /// <summary>Gets or sets audio-codec statistics.</summary>
     public List<BreakdownEntry> AudioCodecs { get; set; } = [];
 
+    /// <summary>Gets or sets audio-codec statistics for video files.</summary>
+    public List<BreakdownEntry> VideoAudioCodecs { get; set; } = [];
+
+    /// <summary>Gets or sets audio-codec statistics for music files.</summary>
+    public List<BreakdownEntry> MusicAudioCodecs { get; set; } = [];
+
     /// <summary>Gets or sets dynamic-range statistics.</summary>
     public List<BreakdownEntry> DynamicRanges { get; set; } = [];
+
+    /// <summary>Gets or sets video-bitrate tier statistics.</summary>
+    public List<BreakdownEntry> VideoBitrates { get; set; } = [];
+
+    /// <summary>Gets or sets distinct audio-language statistics per file.</summary>
+    public List<BreakdownEntry> AudioLanguages { get; set; } = [];
+
+    /// <summary>Gets or sets distinct embedded-subtitle-language statistics per file.</summary>
+    public List<BreakdownEntry> SubtitleLanguages { get; set; } = [];
 }
 
 /// <summary>Statistics for one included Jellyfin library.</summary>

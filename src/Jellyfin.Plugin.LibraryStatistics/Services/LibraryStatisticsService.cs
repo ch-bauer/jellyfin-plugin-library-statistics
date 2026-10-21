@@ -18,6 +18,7 @@ public sealed class LibraryStatisticsService
     private readonly ILibraryManager _libraryManager;
     private readonly IMediaSourceManager _mediaSourceManager;
     private readonly StatisticsStore _store;
+    private readonly LibraryStorageScanner _storageScanner;
     private readonly ILogger<LibraryStatisticsService> _logger;
     private readonly SemaphoreSlim _scanLock = new(1, 1);
 
@@ -26,11 +27,13 @@ public sealed class LibraryStatisticsService
         ILibraryManager libraryManager,
         IMediaSourceManager mediaSourceManager,
         StatisticsStore store,
+        LibraryStorageScanner storageScanner,
         ILogger<LibraryStatisticsService> logger)
     {
         _libraryManager = libraryManager;
         _mediaSourceManager = mediaSourceManager;
         _store = store;
+        _storageScanner = storageScanner;
         _logger = logger;
     }
 
@@ -129,6 +132,8 @@ public sealed class LibraryStatisticsService
                     timelineSources);
             }
 
+            _storageScanner.Scan(folder.Locations, accumulator, cancellationToken);
+
             accumulator.ApplyTo(stats);
             accumulator.MergeInto(total);
             result.Libraries.Add(stats);
@@ -207,7 +212,7 @@ public sealed class LibraryStatisticsService
                 ? source.Size.GetValueOrDefault()
                 : MeasureFile(source.Path);
             IReadOnlyList<MediaStream> streams = source.MediaStreams ?? [];
-            AnalyzeSource(source.Path, source.Container, size, streams, kind, accumulator);
+            AnalyzeSource(source.Path, source.Container, size, source.RunTimeTicks ?? item.RunTimeTicks, streams, kind, accumulator);
             TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, timelineSources);
         }
 
@@ -221,7 +226,7 @@ public sealed class LibraryStatisticsService
         }
 
         long size = MeasureFile(item.Path);
-        AnalyzeSource(item.Path, null, size, ReadStreams(item.Id), kind, accumulator);
+        AnalyzeSource(item.Path, null, size, item.RunTimeTicks, ReadStreams(item.Id), kind, accumulator);
         return size;
     }
 
@@ -351,6 +356,7 @@ public sealed class LibraryStatisticsService
         string? path,
         string? container,
         long size,
+        long? runTimeTicks,
         IReadOnlyList<MediaStream> streams,
         MediaKind kind,
         StatisticsAccumulator accumulator)
@@ -360,22 +366,42 @@ public sealed class LibraryStatisticsService
             string.IsNullOrWhiteSpace(container)
                 ? MediaClassification.ContainerFromPath(path)
                 : container.ToUpperInvariant(),
-            size);
+            size,
+            path);
 
         MediaStream? videoStream = streams.FirstOrDefault(stream => stream.Type == MediaStreamType.Video);
         if (videoStream is not null)
         {
-            accumulator.AddResolution(MediaClassification.ResolutionTier(videoStream.Width, videoStream.Height), size);
-            accumulator.AddVideoCodec(videoStream.Codec ?? "Unknown", size);
-            accumulator.AddDynamicRange(MediaClassification.DynamicRange(videoStream.VideoRangeType.ToString()), size);
+            accumulator.AddResolution(MediaClassification.ResolutionTier(videoStream.Width, videoStream.Height), size, path);
+            accumulator.AddVideoCodec(MediaClassification.VideoCodec(videoStream.Codec), size, path);
+            accumulator.AddDynamicRange(MediaClassification.DynamicRange(videoStream.VideoRangeType.ToString()), size, path);
+            accumulator.AddVideoBitrate(MediaClassification.VideoBitrateTier(videoStream.BitRate, size, runTimeTicks), size, path);
         }
 
-        foreach (string? codec in streams
+        foreach (string codec in streams
             .Where(stream => stream.Type == MediaStreamType.Audio)
-            .Select(stream => string.IsNullOrWhiteSpace(stream.Codec) ? "Unknown" : stream.Codec)
+            .Select(stream => MediaClassification.AudioCodec(stream.Codec, stream.Profile))
             .Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            accumulator.AddAudioCodec(codec!, size);
+            accumulator.AddAudioCodec(codec, size, path);
+            if (kind == MediaKind.Audio) accumulator.AddMusicAudioCodec(codec, size, path);
+            else accumulator.AddVideoAudioCodec(codec, size, path);
+        }
+
+        foreach (string language in streams
+            .Where(stream => stream.Type == MediaStreamType.Audio)
+            .Select(stream => MediaClassification.Language(stream.Language))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            accumulator.AddAudioLanguage(language, size, path);
+        }
+
+        foreach (string language in streams
+            .Where(stream => stream.Type == MediaStreamType.Subtitle)
+            .Select(stream => MediaClassification.Language(stream.Language))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            accumulator.AddSubtitleLanguage(language, size, path);
         }
     }
 
@@ -400,15 +426,17 @@ public sealed class LibraryStatisticsService
         {
             mediaType = "Series";
             BaseItem? series = episode.SeriesId != Guid.Empty ? _libraryManager.GetItemById(episode.SeriesId) : null;
+            BaseItem? season = episode.SeasonId != Guid.Empty ? _libraryManager.GetItemById(episode.SeasonId) : null;
+            int? seasonNumber = season?.IndexNumber ?? episode.ParentIndexNumber;
             title = series?.Name ?? episode.SeriesName ?? "Unknown series";
             productionYear = series?.ProductionYear;
-            string number = episode.ParentIndexNumber.HasValue && episode.IndexNumber.HasValue
-                ? $"S{episode.ParentIndexNumber:00}E{episode.IndexNumber:00}"
+            string number = seasonNumber.HasValue && episode.IndexNumber.HasValue
+                ? $"S{seasonNumber:00}E{episode.IndexNumber:00}"
                 : "Episode";
             subtitle = $"{number} · {episode.Name ?? "Untitled"}";
             identity = DuplicateIdentity.EpisodeKey(
                 title,
-                episode.ParentIndexNumber,
+                seasonNumber,
                 episode.IndexNumber,
                 episode.Name,
                 episode.ProviderIds,

@@ -19,12 +19,14 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 
 ## What it shows
 
-- Jellyfin Helper-style category cards for movies, TV shows, music, other video and total
-  storage.
-- A storage-distribution bar that shows how much space each media category uses.
-- A storage-based per-library breakdown for movies, TV shows, other video and audio.
-- Per-library or whole-server donut charts for containers, resolutions, video codecs,
-  audio codecs and dynamic range.
+- Jellyfin Helper-style category cards for movies, TV shows, music, trickplay, subtitles
+  and all measured files.
+- A storage-distribution bar and per-library table for video, audio, subtitles, images,
+  trickplay, metadata and other sidecar files.
+- Per-library or whole-server donut charts for containers, detailed resolution tiers,
+  video codecs, video and music audio codecs, bitrate tiers, dynamic range, and audio and
+  subtitle languages.
+- Expandable format rows that reveal the exact matching file paths.
 - A storage or media-file growth timeline reconstructed from Jellyfin's indexed dates.
 - Scrollable Largest and Latest views for movies and aggregate series storage.
 - Movies and series episodes that Jellyfin has grouped as multiple merged versions.
@@ -35,9 +37,14 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 ## Merged-version duplicates
 
 The duplicate view starts with Jellyfin's merged media sources, then also finds separate
-Jellyfin items that share IMDb/TMDb/TVDb identity. Movies fall back to a normalized title
-and year. Episodes use the series identity plus Jellyfin's season/episode coordinates;
-episode provider IDs or titles are only fallbacks when those coordinates are incomplete.
+Jellyfin items using metadata detected by Jellyfin. Movies match by IMDb/TMDb/TVDb ID or,
+when those IDs are absent, by title and year. Episodes require the series identity,
+Jellyfin's parent-season number, episode number and episode title; an episode provider ID
+is used only when the coordinates are incomplete.
+
+File and folder names are never duplicate criteria. Paths are used only to verify that a
+metadata match represents distinct physical versions and to show where those versions
+are stored.
 
 A result is listed only when the matched items resolve to two or more distinct media paths.
 Series are checked per episode and displayed under the series title. When Jellyfin returns
@@ -88,7 +95,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.1.8.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.2.0.0.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

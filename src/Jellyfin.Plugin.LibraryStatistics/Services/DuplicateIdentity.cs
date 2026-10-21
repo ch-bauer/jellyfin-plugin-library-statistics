@@ -33,7 +33,8 @@ internal static class DuplicateIdentity
         {
             return "episode:series:" + series
                 + ":season:" + seasonNumber.Value
-                + ":episode:" + episodeNumber.Value;
+                + ":episode:" + episodeNumber.Value
+                + ":title:" + Normalize(episodeTitle);
         }
 
         string episodeProvider = ProviderKey(episodeProviderIds);

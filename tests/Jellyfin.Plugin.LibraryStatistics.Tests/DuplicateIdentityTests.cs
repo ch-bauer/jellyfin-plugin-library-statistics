@@ -49,4 +49,26 @@ public sealed class DuplicateIdentityTests
 
         Assert.NotEqual(episodeTwo, episodeTwentyTwo);
     }
+
+    [Fact]
+    public void EpisodeKey_RequiresMatchingTitleAlongsideCoordinates()
+    {
+        var seriesIds = new Dictionary<string, string> { ["Tvdb"] = "101" };
+
+        var first = DuplicateIdentity.EpisodeKey("Example", 1, 23, "First title", null, seriesIds);
+        var second = DuplicateIdentity.EpisodeKey("Example", 1, 23, "Different title", null, seriesIds);
+
+        Assert.NotEqual(first, second);
+    }
+
+    [Fact]
+    public void EpisodeKey_DoesNotCollapseSameEpisodeNumberAcrossSeasons()
+    {
+        var seriesIds = new Dictionary<string, string> { ["Tvdb"] = "355567" };
+
+        var seasonOne = DuplicateIdentity.EpisodeKey("The Boys", 1, 23, "Folge 23", null, seriesIds);
+        var seasonTwo = DuplicateIdentity.EpisodeKey("The Boys", 2, 23, "Folge 23", null, seriesIds);
+
+        Assert.NotEqual(seasonOne, seasonTwo);
+    }
 }
