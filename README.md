@@ -46,18 +46,18 @@ Requirements: .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the tests and creates `dist/library-statistics_1.1.0.0.zip`.
+The script runs the tests and creates `dist/library-statistics_1.1.1.0.zip`.
 
 ## Build and release pipeline
 
 - Every push to `main` and every pull request restores, builds, tests, publishes, and retains a downloadable build artifact for 14 days.
-- Pushing a version tag such as `v1.1.0.0` reruns the tests, builds a minimal Jellyfin package, creates the GitHub release, calculates its MD5 checksum, and updates `manifest.json` automatically.
+- Pushing a version tag such as `v1.1.1.0` reruns the tests, builds a minimal Jellyfin package, creates the GitHub release, calculates its MD5 checksum, and updates `manifest.json` automatically.
 - A release tag must match both the assembly version and `meta.json`; a mismatch stops the release before publishing.
 
 ## Manual installation
 
 1. Build the plugin or extract the release zip.
-2. Copy its files into `LibraryStatistics_1.1.0.0/` inside Jellyfin's plugins directory.
+2. Copy its files into `LibraryStatistics_1.1.1.0/` inside Jellyfin's plugins directory.
 3. Restart Jellyfin.
 4. Open Library Statistics from the dashboard/sidebar, choose exclusions, and select **Scan libraries**.
 
