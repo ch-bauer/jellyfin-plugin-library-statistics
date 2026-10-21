@@ -1,0 +1,14 @@
+{
+  "category": "General",
+  "changelog": "Initial Jellyfin 10.11.11 release with library exclusions and read-only media statistics.",
+  "description": "Scan selected Jellyfin libraries and inspect storage, media counts, containers, resolutions, codecs, and dynamic range.",
+  "guid": "102f0695-0752-4348-95ac-01f2825db6cb",
+  "name": "Library Statistics",
+  "overview": "A focused, read-only view of what is in your libraries.",
+  "owner": "Christian",
+  "targetAbi": "10.11.11.0",
+  "timestamp": "2026-10-21T00:00:00.000Z",
+  "version": "1.0.0.0",
+  "status": "Active",
+  "autoUpdate": false
+}

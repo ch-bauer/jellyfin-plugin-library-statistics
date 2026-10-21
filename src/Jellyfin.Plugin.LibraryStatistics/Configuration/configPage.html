@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Library Statistics</title>
+</head>
+<body>
+<div id="LibraryStatisticsPage"
+     data-role="page"
+     class="page type-interior pluginConfigurationPage"
+     data-require="emby-button,emby-checkbox">
+    <style>
+        #LibraryStatisticsPage {
+            --ls-violet: #aa5cc3;
+            --ls-cyan: #00a4dc;
+            --ls-ink: rgba(16, 18, 24, .72);
+            --ls-line: rgba(255, 255, 255, .12);
+            --ls-muted: rgba(255, 255, 255, .67);
+        }
+
+        .ls-shell { max-width: 76rem; margin: 0 auto; padding: 1.4rem 1.2rem 5rem; }
+        .ls-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.2rem; }
+        .ls-title { margin: 0; font-size: clamp(2rem, 5vw, 3.6rem); line-height: .95; letter-spacing: -.045em; }
+        .ls-subtitle { max-width: 44rem; margin: .7rem 0 0; color: var(--ls-muted); line-height: 1.5; }
+        .ls-scan-button { flex: none; min-width: 10rem; }
+        .ls-scan-button[disabled] { opacity: .55; }
+        .ls-tabs { display: flex; gap: .35rem; overflow-x: auto; border-bottom: 1px solid var(--ls-line); margin-bottom: 1.5rem; }
+        .ls-tab { appearance: none; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--ls-muted); padding: .85rem 1rem .7rem; cursor: pointer; font: inherit; font-weight: 600; }
+        .ls-tab[aria-selected="true"] { color: #fff; border-color: var(--ls-cyan); }
+        .ls-panel[hidden] { display: none !important; }
+        .ls-status { min-height: 1.4rem; color: var(--ls-muted); margin: -.3rem 0 1.2rem; }
+        .ls-status.is-error { color: #ff9d9d; }
+        .ls-summary { display: grid; grid-template-columns: 1.4fr repeat(4, minmax(7.5rem, 1fr)); border: 1px solid var(--ls-line); background: var(--ls-ink); }
+        .ls-metric { min-width: 0; padding: 1.2rem; border-right: 1px solid var(--ls-line); }
+        .ls-metric:last-child { border-right: 0; }
+        .ls-metric strong { display: block; font-size: clamp(1.45rem, 3vw, 2.25rem); line-height: 1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+        .ls-metric span { display: block; margin-top: .5rem; color: var(--ls-muted); }
+        .ls-metric-primary strong { color: var(--ls-cyan); }
+        .ls-section-title { margin: 2rem 0 .8rem; font-size: 1.3rem; }
+        .ls-ledger { border: 1px solid var(--ls-line); background: var(--ls-ink); overflow-x: auto; }
+        .ls-table { width: 100%; border-collapse: collapse; min-width: 48rem; }
+        .ls-table th { text-align: left; color: var(--ls-muted); font-weight: 500; padding: .7rem 1rem; border-bottom: 1px solid var(--ls-line); }
+        .ls-table td { padding: .9rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, .07); font-variant-numeric: tabular-nums; }
+        .ls-table tr:last-child td { border-bottom: 0; }
+        .ls-library-name { font-weight: 650; }
+        .ls-library-type { color: var(--ls-muted); font-size: .85em; margin-top: .2rem; }
+        .ls-breakdowns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+        .ls-breakdown { border: 1px solid var(--ls-line); background: var(--ls-ink); padding: 1rem; }
+        .ls-breakdown h3 { margin: 0 0 1rem; font-size: 1.05rem; }
+        .ls-bar-row { display: grid; grid-template-columns: minmax(7rem, 1fr) 3fr auto; gap: .75rem; align-items: center; margin: .65rem 0; }
+        .ls-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ls-bar-track { height: .48rem; background: rgba(255, 255, 255, .1); overflow: hidden; }
+        .ls-bar-fill { height: 100%; background: linear-gradient(90deg, var(--ls-violet), var(--ls-cyan)); }
+        .ls-bar-value { min-width: 6.5rem; text-align: right; color: var(--ls-muted); font-variant-numeric: tabular-nums; }
+        .ls-empty { border: 1px dashed var(--ls-line); padding: 2rem; color: var(--ls-muted); text-align: center; }
+        .ls-settings { max-width: 48rem; }
+        .ls-library-picker { border-top: 1px solid var(--ls-line); margin: 1.2rem 0; }
+        .ls-library-option { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem .2rem; border-bottom: 1px solid var(--ls-line); }
+        .ls-library-option label { display: flex; align-items: center; gap: .7rem; cursor: pointer; }
+        .ls-kind { color: var(--ls-muted); }
+        .ls-note { color: var(--ls-muted); line-height: 1.5; }
+        .ls-save { max-width: 18rem; }
+        .ls-spinner { display: inline-block; width: .85rem; height: .85rem; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: ls-spin .7s linear infinite; vertical-align: -.1rem; margin-right: .5rem; }
+        @keyframes ls-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .ls-spinner { animation: none; } }
+        @media (max-width: 760px) {
+            .ls-head { align-items: stretch; flex-direction: column; }
+            .ls-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .ls-metric { border-bottom: 1px solid var(--ls-line); }
+            .ls-metric-primary { grid-column: 1 / -1; }
+            .ls-breakdowns { grid-template-columns: 1fr; }
+        }
+    </style>
+
+    <div data-role="content">
+        <div class="ls-shell">
+            <header class="ls-head">
+                <div>
+                    <h1 class="ls-title">Library Statistics</h1>
+                    <p class="ls-subtitle">A read-only inventory of the media Jellyfin already knows about. Excluded libraries never enter a scan.</p>
+                </div>
+                <button is="emby-button" type="button" class="raised button-submit ls-scan-button" id="lsScan">
+                    <span>Scan libraries</span>
+                </button>
+            </header>
+
+            <nav class="ls-tabs" aria-label="Library Statistics sections">
+                <button type="button" class="ls-tab" data-panel="overview" aria-selected="true">Overview</button>
+                <button type="button" class="ls-tab" data-panel="codecs" aria-selected="false">Codecs</button>
+                <button type="button" class="ls-tab" data-panel="settings" aria-selected="false">Settings</button>
+            </nav>
+
+            <div id="lsStatus" class="ls-status" aria-live="polite"></div>
+
+            <section id="lsPanelOverview" class="ls-panel">
+                <div id="lsOverviewEmpty" class="ls-empty">No scan yet. Choose any exclusions in Settings, then scan your libraries.</div>
+                <div id="lsOverview" hidden>
+                    <div class="ls-summary" id="lsSummary"></div>
+                    <h2 class="ls-section-title">Libraries</h2>
+                    <div class="ls-ledger">
+                        <table class="ls-table">
+                            <thead><tr><th>Library</th><th>Size</th><th>Files</th><th>Movies</th><th>Episodes</th><th>Audio</th></tr></thead>
+                            <tbody id="lsLibraryRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="lsPanelCodecs" class="ls-panel" hidden>
+                <div id="lsCodecsEmpty" class="ls-empty">Run a scan to build codec and format statistics.</div>
+                <div id="lsBreakdowns" class="ls-breakdowns" hidden></div>
+            </section>
+
+            <section id="lsPanelSettings" class="ls-panel" hidden>
+                <form id="lsSettingsForm" class="ls-settings">
+                    <h2 class="ls-section-title" style="margin-top:0;">Excluded libraries</h2>
+                    <p class="ls-note">Checked libraries are omitted completely. Saving exclusions does not scan; run a new scan afterward to refresh the dashboard.</p>
+                    <div id="lsLibraryPicker" class="ls-library-picker"><div class="ls-empty">Loading libraries…</div></div>
+                    <button is="emby-button" type="submit" class="raised button-submit block ls-save"><span>Save exclusions</span></button>
+                </form>
+            </section>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function () {
+            'use strict';
+            var pluginId = '102f0695-0752-4348-95ac-01f2825db6cb';
+
+            function page() { return document.querySelector('#LibraryStatisticsPage'); }
+            function pick(object, pascal) {
+                if (!object) return undefined;
+                var camel = pascal.charAt(0).toLowerCase() + pascal.slice(1);
+                return object[pascal] === undefined ? object[camel] : object[pascal];
+            }
+            function esc(value) {
+                return String(value === undefined || value === null ? '' : value)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            }
+            function api(path, method) {
+                return ApiClient.ajax({
+                    type: method || 'GET',
+                    url: ApiClient.getUrl('LibraryStatistics/' + path),
+                    dataType: 'json'
+                });
+            }
+            function size(bytes) {
+                var value = Number(bytes) || 0;
+                var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+                var unit = 0;
+                while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+                return (unit === 0 ? value.toFixed(0) : value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)) + ' ' + units[unit];
+            }
+            function count(value) { return (Number(value) || 0).toLocaleString(); }
+            function list(value) { return Array.isArray(value) ? value : []; }
+            function setStatus(message, error) {
+                var node = page().querySelector('#lsStatus');
+                node.textContent = message || '';
+                node.classList.toggle('is-error', !!error);
+            }
+            function showPanel(name) {
+                page().querySelectorAll('.ls-tab').forEach(function (tab) {
+                    tab.setAttribute('aria-selected', String(tab.getAttribute('data-panel') === name));
+                });
+                ['Overview', 'Codecs', 'Settings'].forEach(function (panel) {
+                    page().querySelector('#lsPanel' + panel).hidden = panel.toLowerCase() !== name;
+                });
+            }
+            function metric(value, label, primary) {
+                return '<div class="ls-metric' + (primary ? ' ls-metric-primary' : '') + '"><strong>'
+                    + esc(value) + '</strong><span>' + esc(label) + '</span></div>';
+            }
+            function renderResult(result) {
+                var total = pick(result, 'Total') || {};
+                var libraries = list(pick(result, 'Libraries'));
+                page().querySelector('#lsOverviewEmpty').hidden = true;
+                page().querySelector('#lsOverview').hidden = false;
+                page().querySelector('#lsCodecsEmpty').hidden = true;
+                page().querySelector('#lsBreakdowns').hidden = false;
+                page().querySelector('#lsSummary').innerHTML =
+                    metric(size(pick(total, 'TotalSizeBytes')), 'measured storage', true)
+                    + metric(count(pick(total, 'MediaFileCount')), 'media files')
+                    + metric(count(pick(total, 'MovieCount')), 'movies')
+                    + metric(count(pick(total, 'EpisodeCount')), 'episodes')
+                    + metric(count(pick(total, 'AudioCount')), 'audio tracks');
+                page().querySelector('#lsLibraryRows').innerHTML = libraries.map(function (library) {
+                    return '<tr><td><div class="ls-library-name">' + esc(pick(library, 'LibraryName')) + '</div>'
+                        + '<div class="ls-library-type">' + esc(pick(library, 'CollectionType')) + '</div></td>'
+                        + '<td>' + size(pick(library, 'TotalSizeBytes')) + '</td>'
+                        + '<td>' + count(pick(library, 'MediaFileCount')) + '</td>'
+                        + '<td>' + count(pick(library, 'MovieCount')) + '</td>'
+                        + '<td>' + count(pick(library, 'EpisodeCount')) + '</td>'
+                        + '<td>' + count(pick(library, 'AudioCount')) + '</td></tr>';
+                }).join('');
+                var groups = [
+                    ['Containers', 'Containers'], ['Resolutions', 'Resolution'],
+                    ['VideoCodecs', 'Video codecs'], ['AudioCodecs', 'Audio codecs'],
+                    ['DynamicRanges', 'Dynamic range']
+                ];
+                page().querySelector('#lsBreakdowns').innerHTML = groups.map(function (group) {
+                    return breakdown(group[1], list(pick(total, group[0])));
+                }).join('');
+                var stamp = new Date(pick(result, 'ScannedAtUtc'));
+                var elapsed = Number(pick(result, 'DurationMilliseconds')) || 0;
+                setStatus('Last scan: ' + stamp.toLocaleString() + ' · ' + (elapsed / 1000).toFixed(1) + ' seconds · '
+                    + libraries.length + ' included ' + (libraries.length === 1 ? 'library' : 'libraries'));
+            }
+            function breakdown(title, entries) {
+                if (!entries.length) {
+                    return '<section class="ls-breakdown"><h3>' + esc(title) + '</h3><div class="ls-note">No data.</div></section>';
+                }
+                var maximum = Math.max.apply(null, entries.map(function (entry) { return Number(pick(entry, 'SizeBytes')) || 0; }));
+                if (!maximum) maximum = Math.max.apply(null, entries.map(function (entry) { return Number(pick(entry, 'Count')) || 0; }));
+                var rows = entries.slice(0, 12).map(function (entry) {
+                    var bytes = Number(pick(entry, 'SizeBytes')) || 0;
+                    var value = bytes || Number(pick(entry, 'Count')) || 0;
+                    var percent = maximum ? Math.max(2, value / maximum * 100) : 0;
+                    return '<div class="ls-bar-row" title="' + esc(pick(entry, 'Label')) + '">'
+                        + '<span class="ls-bar-label">' + esc(pick(entry, 'Label')) + '</span>'
+                        + '<span class="ls-bar-track"><span class="ls-bar-fill" style="width:' + percent.toFixed(2) + '%"></span></span>'
+                        + '<span class="ls-bar-value">' + count(pick(entry, 'Count')) + ' · ' + size(bytes) + '</span></div>';
+                }).join('');
+                return '<section class="ls-breakdown"><h3>' + esc(title) + '</h3>' + rows + '</section>';
+            }
+            function loadLatest() {
+                return api('Latest').then(function (result) {
+                    if (result) renderResult(result);
+                }, function (error) {
+                    if (!error || error.status !== 204) setStatus('The saved scan result could not be loaded.', true);
+                });
+            }
+            function loadLibraries() {
+                return api('Libraries').then(function (libraries) {
+                    var picker = page().querySelector('#lsLibraryPicker');
+                    if (!libraries || !libraries.length) {
+                        picker.innerHTML = '<div class="ls-empty">Jellyfin has no media libraries to scan.</div>';
+                        return;
+                    }
+                    picker.innerHTML = libraries.map(function (library) {
+                        var id = pick(library, 'Id');
+                        return '<div class="ls-library-option"><label><input is="emby-checkbox" type="checkbox" '
+                            + 'class="ls-exclusion" value="' + esc(id) + '"' + (pick(library, 'Excluded') ? ' checked' : '') + ' />'
+                            + '<span>' + esc(pick(library, 'Name')) + '</span></label><span class="ls-kind">'
+                            + esc(pick(library, 'CollectionType')) + '</span></div>';
+                    }).join('');
+                }, function () {
+                    page().querySelector('#lsLibraryPicker').innerHTML = '<div class="ls-empty">Libraries could not be loaded.</div>';
+                });
+            }
+            function scan() {
+                var button = page().querySelector('#lsScan');
+                button.disabled = true;
+                button.querySelector('span').innerHTML = '<span class="ls-spinner"></span>Scanning…';
+                setStatus('Reading Jellyfin media metadata and measuring files…');
+                api('Scan', 'POST').then(function (result) {
+                    renderResult(result);
+                    showPanel('overview');
+                }, function (error) {
+                    var message = error && error.status === 409
+                        ? 'A scan is already running.'
+                        : 'The scan failed. Check the Jellyfin server log for details.';
+                    setStatus(message, true);
+                }).then(function () {
+                    button.disabled = false;
+                    button.querySelector('span').textContent = 'Scan libraries';
+                });
+            }
+            function save(e) {
+                e.preventDefault();
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.ExcludedLibraryIds = Array.prototype.map.call(
+                        page().querySelectorAll('.ls-exclusion:checked'),
+                        function (input) { return input.value; });
+                    return ApiClient.updatePluginConfiguration(pluginId, config);
+                }).then(function (result) {
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                    setStatus('Exclusions saved. Run a scan to refresh the dashboard.');
+                    return loadLibraries();
+                }, function () {
+                    Dashboard.hideLoadingMsg();
+                    setStatus('Exclusions could not be saved.', true);
+                });
+                return false;
+            }
+            function initialize() {
+                page().querySelectorAll('.ls-tab').forEach(function (tab) {
+                    tab.addEventListener('click', function () { showPanel(tab.getAttribute('data-panel')); });
+                });
+                page().querySelector('#lsScan').addEventListener('click', scan);
+                page().querySelector('#lsSettingsForm').addEventListener('submit', save);
+            }
+
+            var root = document.querySelector('#LibraryStatisticsPage');
+            if (!root.dataset.lsInitialized) {
+                root.dataset.lsInitialized = 'true';
+                initialize();
+            }
+            root.addEventListener('pageshow', function () {
+                loadLibraries();
+                loadLatest();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>
