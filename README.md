@@ -35,8 +35,9 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 ## Merged-version duplicates
 
 The duplicate view starts with Jellyfin's merged media sources, then also finds separate
-Jellyfin items that share IMDb/TMDb/TVDb identity. When provider IDs are unavailable, it
-uses a normalized movie title and year, or a series title plus season/episode coordinates.
+Jellyfin items that share IMDb/TMDb/TVDb identity. Movies fall back to a normalized title
+and year. Episodes use the series identity plus Jellyfin's season/episode coordinates;
+episode provider IDs or titles are only fallbacks when those coordinates are incomplete.
 
 A result is listed only when the matched items resolve to two or more distinct media paths.
 Series are checked per episode and displayed under the series title. When Jellyfin returns
@@ -87,7 +88,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.1.7.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.1.8.0.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

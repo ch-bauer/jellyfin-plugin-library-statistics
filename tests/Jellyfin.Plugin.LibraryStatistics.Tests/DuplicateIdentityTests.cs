@@ -35,4 +35,18 @@ public sealed class DuplicateIdentityTests
             DuplicateIdentity.EpisodeKey("Dark", 1, 1, "Secrets", null, null),
             DuplicateIdentity.EpisodeKey("Dark", 1, 2, "Lies", null, null));
     }
+
+    [Fact]
+    public void EpisodeKey_DoesNotCollapseDifferentEpisodesWithSharedProviderId()
+    {
+        var sharedEpisodeIds = new Dictionary<string, string> { ["Imdb"] = "tt0206512" };
+        var seriesIds = new Dictionary<string, string> { ["Imdb"] = "tt0206512" };
+
+        var episodeTwo = DuplicateIdentity.EpisodeKey(
+            "SpongeBob SquarePants", 3, 2, "Episode 2", sharedEpisodeIds, seriesIds);
+        var episodeTwentyTwo = DuplicateIdentity.EpisodeKey(
+            "SpongeBob SquarePants", 3, 22, "Episode 22", sharedEpisodeIds, seriesIds);
+
+        Assert.NotEqual(episodeTwo, episodeTwentyTwo);
+    }
 }

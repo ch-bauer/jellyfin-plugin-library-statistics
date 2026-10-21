@@ -27,21 +27,25 @@ internal static class DuplicateIdentity
         IReadOnlyDictionary<string, string>? episodeProviderIds,
         IReadOnlyDictionary<string, string>? seriesProviderIds)
     {
+        string seriesProvider = ProviderKey(seriesProviderIds);
+        string series = seriesProvider.Length > 0 ? "provider:" + seriesProvider : "title:" + Normalize(seriesTitle);
+        if (seasonNumber.HasValue && episodeNumber.HasValue)
+        {
+            return "episode:series:" + series
+                + ":season:" + seasonNumber.Value
+                + ":episode:" + episodeNumber.Value;
+        }
+
         string episodeProvider = ProviderKey(episodeProviderIds);
         if (episodeProvider.Length > 0)
         {
             return "episode:provider:" + episodeProvider;
         }
 
-        string seriesProvider = ProviderKey(seriesProviderIds);
-        string series = seriesProvider.Length > 0 ? "provider:" + seriesProvider : "title:" + Normalize(seriesTitle);
-        string titleFallback = seasonNumber.HasValue && episodeNumber.HasValue
-            ? string.Empty
-            : Normalize(episodeTitle);
         return "episode:series:" + series
             + ":season:" + (seasonNumber?.ToString() ?? "unknown")
             + ":episode:" + (episodeNumber?.ToString() ?? "unknown")
-            + ":title:" + titleFallback;
+            + ":title:" + Normalize(episodeTitle);
     }
 
     private static string ProviderKey(IReadOnlyDictionary<string, string>? providerIds)
