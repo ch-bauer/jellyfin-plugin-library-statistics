@@ -32,12 +32,13 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 
 ## Merged-version duplicates
 
-The duplicate view uses Jellyfin's own merged media sources as its source of truth. It does
-not infer duplicates from similar titles, years or filenames.
+The duplicate view starts with Jellyfin's merged media sources, then also finds separate
+Jellyfin items that share IMDb/TMDb/TVDb identity. When provider IDs are unavailable, it
+uses a normalized movie title and year, or a series title plus season/episode coordinates.
 
-A movie is listed when its Jellyfin item has two or more distinct media paths. Series are
-checked per episode and displayed under the series title. When Jellyfin returns the same
-merged set through each underlying item, the plugin normalizes and sorts the paths so the
+A result is listed only when the matched items resolve to two or more distinct media paths.
+Series are checked per episode and displayed under the series title. When Jellyfin returns
+the same merged set through each underlying item, the plugin normalizes the paths so the
 group and its statistics are counted only once.
 
 Results can be filtered by media type, library, title, episode or path.

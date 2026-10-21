@@ -77,7 +77,7 @@ public sealed class LibraryStatisticsService
         Stopwatch stopwatch = Stopwatch.StartNew();
         StatisticsResult result = new();
         StatisticsAccumulator total = new();
-        HashSet<string> duplicateSourceSets = new(StringComparer.Ordinal);
+        Dictionary<string, DuplicateAccumulator> duplicateCandidates = new(StringComparer.Ordinal);
         Dictionary<Guid, MediaInsightAccumulator> movieInsights = [];
         Dictionary<Guid, MediaInsightAccumulator> seriesInsights = [];
         List<TimelineSource> timelineSources = [];
@@ -123,8 +123,7 @@ public sealed class LibraryStatisticsService
                     libraryName,
                     accumulator,
                     analyzedPaths,
-                    duplicateSourceSets,
-                    result.DuplicateGroups,
+                    duplicateCandidates,
                     movieInsights,
                     seriesInsights,
                     timelineSources);
@@ -135,7 +134,7 @@ public sealed class LibraryStatisticsService
             result.Libraries.Add(stats);
         }
 
-        result.DuplicateGroups = result.DuplicateGroups
+        result.DuplicateGroups = BuildDuplicateGroups(duplicateCandidates.Values)
             .OrderBy(group => group.MediaType, StringComparer.OrdinalIgnoreCase)
             .ThenBy(group => group.Title, StringComparer.OrdinalIgnoreCase)
             .ThenBy(group => group.Subtitle, StringComparer.OrdinalIgnoreCase)
@@ -165,8 +164,7 @@ public sealed class LibraryStatisticsService
         string libraryName,
         StatisticsAccumulator accumulator,
         ISet<string> analyzedPaths,
-        ISet<string> duplicateSourceSets,
-        ICollection<DuplicateGroup> duplicateGroups,
+        IDictionary<string, DuplicateAccumulator> duplicateCandidates,
         IDictionary<Guid, MediaInsightAccumulator> movieInsights,
         IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
         ICollection<TimelineSource> timelineSources)
@@ -184,6 +182,8 @@ public sealed class LibraryStatisticsService
             .GroupBy(source => source.Path, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToList();
+
+        TrackDuplicateCandidate(item, libraryName, sources, duplicateCandidates);
 
         if (sources.Count == 0)
         {
@@ -211,17 +211,6 @@ public sealed class LibraryStatisticsService
             TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, timelineSources);
         }
 
-        if (sources.Count > 1 && item is Movie or Episode)
-        {
-            string mediaType = item is Movie ? "Movie" : "Series";
-            string sourceSetKey = MediaSourceIdentity.SourceSetKey(
-                mediaType,
-                sources.Select(source => source.Path));
-            if (duplicateSourceSets.Add(sourceSetKey))
-            {
-                duplicateGroups.Add(BuildDuplicateGroup(item, libraryName, sources));
-            }
-        }
     }
 
     private long AnalyzeFallback(BaseItem item, MediaKind kind, StatisticsAccumulator accumulator)
@@ -390,12 +379,22 @@ public sealed class LibraryStatisticsService
         }
     }
 
-    private DuplicateGroup BuildDuplicateGroup(BaseItem item, string libraryName, IEnumerable<MediaSourceInfo> sources)
+    private void TrackDuplicateCandidate(
+        BaseItem item,
+        string libraryName,
+        IReadOnlyCollection<MediaSourceInfo> sources,
+        IDictionary<string, DuplicateAccumulator> candidates)
     {
+        if (item is not Movie && item is not Episode)
+        {
+            return;
+        }
+
         string title = item.Name ?? "Untitled";
         string subtitle = string.Empty;
         string mediaType = "Movie";
         int? productionYear = item.ProductionYear;
+        string identity;
 
         if (item is Episode episode)
         {
@@ -407,33 +406,97 @@ public sealed class LibraryStatisticsService
                 ? $"S{episode.ParentIndexNumber:00}E{episode.IndexNumber:00}"
                 : "Episode";
             subtitle = $"{number} · {episode.Name ?? "Untitled"}";
+            identity = DuplicateIdentity.EpisodeKey(
+                title,
+                episode.ParentIndexNumber,
+                episode.IndexNumber,
+                episode.Name,
+                episode.ProviderIds,
+                series?.ProviderIds);
+        }
+        else
+        {
+            identity = DuplicateIdentity.MovieKey(title, productionYear, item.ProviderIds);
         }
 
-        return new DuplicateGroup
+        if (!candidates.TryGetValue(identity, out DuplicateAccumulator? candidate))
         {
-            ItemId = item.Id,
-            MediaType = mediaType,
-            Title = title,
-            Subtitle = subtitle,
-            ProductionYear = productionYear,
-            LibraryName = libraryName,
-            Versions = sources.Select(source => new MediaVersionDetail
+            candidate = new DuplicateAccumulator(item.Id, mediaType, title, subtitle, productionYear);
+            candidates[identity] = candidate;
+        }
+
+        candidate.LibraryNames.Add(libraryName);
+        if (sources.Count > 0)
+        {
+            foreach (MediaSourceInfo source in sources)
             {
-                Name = source.Name ?? string.Empty,
-                Path = source.Path ?? string.Empty,
-                Container = string.IsNullOrWhiteSpace(source.Container)
-                    ? MediaClassification.ContainerFromPath(source.Path)
-                    : source.Container.ToUpperInvariant(),
-                SizeBytes = source.Size.GetValueOrDefault() > 0
-                    ? source.Size.GetValueOrDefault()
-                    : MeasureFile(source.Path),
-                RunTimeTicks = source.RunTimeTicks ?? item.RunTimeTicks,
-                Streams = (source.MediaStreams ?? [])
+                if (!string.IsNullOrWhiteSpace(source.Path))
+                {
+                    candidate.Versions.TryAdd(
+                        MediaSourceIdentity.PathKey(source.Path),
+                        ToVersionDetail(item, source));
+                }
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(item.Path))
+        {
+            return;
+        }
+
+        candidate.Versions.TryAdd(
+            MediaSourceIdentity.PathKey(item.Path),
+            new MediaVersionDetail
+            {
+                Name = item.Name ?? string.Empty,
+                Path = item.Path,
+                Container = MediaClassification.ContainerFromPath(item.Path),
+                SizeBytes = MeasureFile(item.Path),
+                RunTimeTicks = item.RunTimeTicks,
+                Streams = ReadStreams(item.Id)
                     .Where(IsRelevantStream)
                     .Select(ToStreamDetail)
                     .ToList()
-            }).ToList()
-        };
+            });
+    }
+
+    private MediaVersionDetail ToVersionDetail(BaseItem item, MediaSourceInfo source) => new()
+    {
+        Name = string.IsNullOrWhiteSpace(source.Name) ? item.Name ?? string.Empty : source.Name,
+        Path = source.Path ?? string.Empty,
+        Container = string.IsNullOrWhiteSpace(source.Container)
+            ? MediaClassification.ContainerFromPath(source.Path)
+            : source.Container.ToUpperInvariant(),
+        SizeBytes = source.Size.GetValueOrDefault() > 0
+            ? source.Size.GetValueOrDefault()
+            : MeasureFile(source.Path),
+        RunTimeTicks = source.RunTimeTicks ?? item.RunTimeTicks,
+        Streams = (source.MediaStreams ?? [])
+            .Where(IsRelevantStream)
+            .Select(ToStreamDetail)
+            .ToList()
+    };
+
+    private static List<DuplicateGroup> BuildDuplicateGroups(IEnumerable<DuplicateAccumulator> candidates)
+    {
+        return candidates
+            .Where(candidate => candidate.Versions.Count > 1)
+            .Select(candidate => new DuplicateGroup
+            {
+                ItemId = candidate.ItemId,
+                MediaType = candidate.MediaType,
+                Title = candidate.Title,
+                Subtitle = candidate.Subtitle,
+                ProductionYear = candidate.ProductionYear,
+                LibraryName = string.Join(", ", candidate.LibraryNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)),
+                Versions = candidate.Versions.Values
+                    .OrderBy(version => version.Name, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(version => version.Path, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            })
+            .ToList();
     }
 
     private List<MediaSourceInfo> GetMediaSources(BaseItem item)
@@ -512,6 +575,28 @@ public sealed class LibraryStatisticsService
         internal string Path { get; set; } = string.Empty;
 
         internal int FileCount { get; set; }
+    }
+
+    private sealed class DuplicateAccumulator(
+        Guid itemId,
+        string mediaType,
+        string title,
+        string subtitle,
+        int? productionYear)
+    {
+        internal Guid ItemId { get; } = itemId;
+
+        internal string MediaType { get; } = mediaType;
+
+        internal string Title { get; } = title;
+
+        internal string Subtitle { get; } = subtitle;
+
+        internal int? ProductionYear { get; } = productionYear;
+
+        internal HashSet<string> LibraryNames { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        internal Dictionary<string, MediaVersionDetail> Versions { get; } = new(StringComparer.Ordinal);
     }
 
     private readonly record struct TimelineSource(DateTime DateCreatedUtc, long SizeBytes);
