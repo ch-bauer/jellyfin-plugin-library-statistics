@@ -13,7 +13,7 @@
         "changelog": "Uses metadata-only duplicate matching, resolves the Jellyfin parent season, adds Helper-style sidecar storage categories, richer media facets and file-path drilldowns.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.2.0.0/library-statistics_1.2.0.0.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "0ba23a3683c1dd880c86fa23d051a16f",
         "timestamp": "2026-10-21T00:00:00Z"
       },
       {
