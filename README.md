@@ -85,7 +85,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.1.5.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.1.6.0.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub
