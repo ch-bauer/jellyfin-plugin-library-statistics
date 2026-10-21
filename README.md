@@ -39,8 +39,9 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 The duplicate view starts with Jellyfin's merged media sources, then also finds separate
 Jellyfin items using metadata detected by Jellyfin. Movies match by IMDb/TMDb/TVDb ID or,
 when those IDs are absent, by title and year. Episodes require the series identity,
-Jellyfin's parent-season number, episode number and episode title; an episode provider ID
-is used only when the coordinates are incomplete.
+Jellyfin's parent-season number, episode number and episode title. When either coordinate
+is missing, the item is eligible only through Jellyfin's own merged media sources and is
+not cross-matched to a separate item.
 
 File and folder names are never duplicate criteria. Paths are used only to verify that a
 metadata match represents distinct physical versions and to show where those versions
@@ -95,7 +96,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.2.0.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.2.1.0.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

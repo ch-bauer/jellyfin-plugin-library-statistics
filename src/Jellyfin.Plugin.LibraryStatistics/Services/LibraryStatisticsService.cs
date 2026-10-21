@@ -441,6 +441,12 @@ public sealed class LibraryStatisticsService
                 episode.Name,
                 episode.ProviderIds,
                 series?.ProviderIds);
+            if (!seasonNumber.HasValue || !episode.IndexNumber.HasValue)
+            {
+                // Incomplete coordinates are not reliable enough for cross-item matching.
+                // Jellyfin-merged media sources still remain grouped within this item.
+                identity += ":jellyfin-item:" + item.Id.ToString("N");
+            }
         }
         else
         {

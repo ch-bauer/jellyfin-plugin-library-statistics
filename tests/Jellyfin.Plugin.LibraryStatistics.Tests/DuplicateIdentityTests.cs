@@ -71,4 +71,14 @@ public sealed class DuplicateIdentityTests
 
         Assert.NotEqual(seasonOne, seasonTwo);
     }
+
+    [Fact]
+    public void EpisodeKey_DoesNotUseEpisodeProviderIdAloneWhenCoordinatesAreIncomplete()
+    {
+        var sharedIds = new Dictionary<string, string> { ["Imdb"] = "tt0206512" };
+        var first = DuplicateIdentity.EpisodeKey("SpongeBob", 3, null, "Gefängnisstrafe", sharedIds, sharedIds);
+        var second = DuplicateIdentity.EpisodeKey("SpongeBob", 3, null, "Punkt, Punkt, Komma, Strich", sharedIds, sharedIds);
+
+        Assert.NotEqual(first, second);
+    }
 }

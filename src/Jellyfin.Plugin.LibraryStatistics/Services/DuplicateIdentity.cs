@@ -38,15 +38,11 @@ internal static class DuplicateIdentity
         }
 
         string episodeProvider = ProviderKey(episodeProviderIds);
-        if (episodeProvider.Length > 0)
-        {
-            return "episode:provider:" + episodeProvider;
-        }
-
         return "episode:series:" + series
             + ":season:" + (seasonNumber?.ToString() ?? "unknown")
             + ":episode:" + (episodeNumber?.ToString() ?? "unknown")
-            + ":title:" + Normalize(episodeTitle);
+            + ":title:" + Normalize(episodeTitle)
+            + ":provider:" + (episodeProvider.Length > 0 ? episodeProvider : "unknown");
     }
 
     private static string ProviderKey(IReadOnlyDictionary<string, string>? providerIds)
