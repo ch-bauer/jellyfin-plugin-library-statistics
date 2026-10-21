@@ -28,7 +28,7 @@ jobs:
         run: dotnet publish src/Jellyfin.Plugin.LibraryStatistics -c Release --no-build -o publish
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: library-statistics-${{ github.sha }}
           path: |
