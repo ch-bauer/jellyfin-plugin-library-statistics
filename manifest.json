@@ -13,7 +13,7 @@
         "changelog": "Reuses Jellyfin Helper's fixed donut-chart layout and arc renderer, restores scrolling throughout the dashboard, and adds a growth timeline plus latest/largest movie and series views.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.2.0/library-statistics_1.1.2.0.zip",
-        "checksum": "RELEASE_WORKFLOW_WILL_UPDATE",
+        "checksum": "9a1f042aa06df2fdb7c3a4ab6e4880c3",
         "timestamp": "2026-10-21T00:00:00Z"
       },
       {
