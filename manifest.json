@@ -13,7 +13,7 @@
         "changelog": "Requires complete Jellyfin episode coordinates for cross-item matching; incomplete metadata can only produce a duplicate through Jellyfin's own merged sources.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.2.1.0/library-statistics_1.2.1.0.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "7c583fd1c7f870cd69a40983662ab0a6",
         "timestamp": "2026-10-21T00:00:00Z"
       },
       {
