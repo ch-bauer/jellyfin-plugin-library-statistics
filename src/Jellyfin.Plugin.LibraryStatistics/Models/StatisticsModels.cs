@@ -163,6 +163,47 @@ public sealed class DuplicateGroup
     public List<MediaVersionDetail> Versions { get; set; } = [];
 }
 
+/// <summary>One cumulative point in the media-library growth timeline.</summary>
+public sealed class GrowthPoint
+{
+    /// <summary>Gets or sets the UTC day represented by this point.</summary>
+    public DateTime DateUtc { get; set; }
+
+    /// <summary>Gets or sets the cumulative measured bytes at this point.</summary>
+    public long CumulativeSizeBytes { get; set; }
+
+    /// <summary>Gets or sets the cumulative number of media files at this point.</summary>
+    public int CumulativeFileCount { get; set; }
+}
+
+/// <summary>One movie or series entry used by the largest/latest explorer.</summary>
+public sealed class MediaInsight
+{
+    /// <summary>Gets or sets the Jellyfin item or series id.</summary>
+    public Guid ItemId { get; set; }
+
+    /// <summary>Gets or sets Movie or Series.</summary>
+    public string MediaType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the display title.</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the containing library.</summary>
+    public string LibraryName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the total measured bytes for this movie or series.</summary>
+    public long SizeBytes { get; set; }
+
+    /// <summary>Gets or sets the newest indexed creation date represented by the entry.</summary>
+    public DateTime DateCreatedUtc { get; set; }
+
+    /// <summary>Gets or sets an indexed media path represented by the entry.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the number of distinct media files represented by the entry.</summary>
+    public int FileCount { get; set; }
+}
+
 /// <summary>The complete result of a library scan.</summary>
 public sealed class StatisticsResult
 {
@@ -180,4 +221,19 @@ public sealed class StatisticsResult
 
     /// <summary>Gets or sets movie and series-episode items with merged media versions.</summary>
     public List<DuplicateGroup> DuplicateGroups { get; set; } = [];
+
+    /// <summary>Gets or sets cumulative growth points reconstructed from indexed media dates.</summary>
+    public List<GrowthPoint> GrowthTimeline { get; set; } = [];
+
+    /// <summary>Gets or sets movies ordered by measured size.</summary>
+    public List<MediaInsight> LargestMovies { get; set; } = [];
+
+    /// <summary>Gets or sets movies ordered by indexed creation date.</summary>
+    public List<MediaInsight> LatestMovies { get; set; } = [];
+
+    /// <summary>Gets or sets series ordered by aggregate episode-media size.</summary>
+    public List<MediaInsight> LargestSeries { get; set; } = [];
+
+    /// <summary>Gets or sets series ordered by newest indexed episode date.</summary>
+    public List<MediaInsight> LatestSeries { get; set; } = [];
 }

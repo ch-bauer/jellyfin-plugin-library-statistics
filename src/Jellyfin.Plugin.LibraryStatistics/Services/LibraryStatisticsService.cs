@@ -78,6 +78,9 @@ public sealed class LibraryStatisticsService
         StatisticsResult result = new();
         StatisticsAccumulator total = new();
         HashSet<string> duplicateSourceSets = new(StringComparer.Ordinal);
+        Dictionary<Guid, MediaInsightAccumulator> movieInsights = [];
+        Dictionary<Guid, MediaInsightAccumulator> seriesInsights = [];
+        List<TimelineSource> timelineSources = [];
         HashSet<string> excluded = new(
             Plugin.Instance?.Configuration.ExcludedLibraryIds ?? [],
             StringComparer.OrdinalIgnoreCase);
@@ -121,7 +124,10 @@ public sealed class LibraryStatisticsService
                     accumulator,
                     analyzedPaths,
                     duplicateSourceSets,
-                    result.DuplicateGroups);
+                    result.DuplicateGroups,
+                    movieInsights,
+                    seriesInsights,
+                    timelineSources);
             }
 
             accumulator.ApplyTo(stats);
@@ -135,6 +141,11 @@ public sealed class LibraryStatisticsService
             .ThenBy(group => group.Subtitle, StringComparer.OrdinalIgnoreCase)
             .ToList();
         total.ApplyTo(result.Total);
+        result.GrowthTimeline = BuildTimeline(timelineSources);
+        result.LargestMovies = BuildInsights(movieInsights.Values, latest: false);
+        result.LatestMovies = BuildInsights(movieInsights.Values, latest: true);
+        result.LargestSeries = BuildInsights(seriesInsights.Values, latest: false);
+        result.LatestSeries = BuildInsights(seriesInsights.Values, latest: true);
         stopwatch.Stop();
         result.DurationMilliseconds = stopwatch.ElapsedMilliseconds;
         result.ScannedAtUtc = DateTime.UtcNow;
@@ -155,7 +166,10 @@ public sealed class LibraryStatisticsService
         StatisticsAccumulator accumulator,
         ISet<string> analyzedPaths,
         ISet<string> duplicateSourceSets,
-        ICollection<DuplicateGroup> duplicateGroups)
+        ICollection<DuplicateGroup> duplicateGroups,
+        IDictionary<Guid, MediaInsightAccumulator> movieInsights,
+        IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
+        ICollection<TimelineSource> timelineSources)
     {
         MediaKind kind = item switch
         {
@@ -175,7 +189,8 @@ public sealed class LibraryStatisticsService
         {
             if (analyzedPaths.Add(MediaSourceIdentity.PathKey(item.Path)))
             {
-                AnalyzeFallback(item, kind, accumulator);
+                long size = AnalyzeFallback(item, kind, accumulator);
+                TrackMedia(item, libraryName, item.Path, size, movieInsights, seriesInsights, timelineSources);
             }
 
             return;
@@ -193,6 +208,7 @@ public sealed class LibraryStatisticsService
                 : MeasureFile(source.Path);
             IReadOnlyList<MediaStream> streams = source.MediaStreams ?? [];
             AnalyzeSource(source.Path, source.Container, size, streams, kind, accumulator);
+            TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, timelineSources);
         }
 
         if (sources.Count > 1 && item is Movie or Episode)
@@ -208,15 +224,138 @@ public sealed class LibraryStatisticsService
         }
     }
 
-    private void AnalyzeFallback(BaseItem item, MediaKind kind, StatisticsAccumulator accumulator)
+    private long AnalyzeFallback(BaseItem item, MediaKind kind, StatisticsAccumulator accumulator)
     {
         if (string.IsNullOrWhiteSpace(item.Path))
         {
-            return;
+            return 0;
         }
 
         long size = MeasureFile(item.Path);
         AnalyzeSource(item.Path, null, size, ReadStreams(item.Id), kind, accumulator);
+        return size;
+    }
+
+    private void TrackMedia(
+        BaseItem item,
+        string libraryName,
+        string? path,
+        long size,
+        IDictionary<Guid, MediaInsightAccumulator> movieInsights,
+        IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
+        ICollection<TimelineSource> timelineSources)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        DateTime createdUtc = NormalizeUtc(item.DateCreated);
+        timelineSources.Add(new TimelineSource(createdUtc, Math.Max(0, size)));
+
+        if (item is not Movie && item is not Episode)
+        {
+            return;
+        }
+
+        if (item is Movie)
+        {
+            AddInsight(movieInsights, item.Id, "Movie", item.Name ?? "Untitled", libraryName, path, size, createdUtc);
+            return;
+        }
+
+        var episode = (Episode)item;
+        Guid seriesId = episode.SeriesId != Guid.Empty ? episode.SeriesId : episode.Id;
+        BaseItem? series = episode.SeriesId != Guid.Empty ? _libraryManager.GetItemById(episode.SeriesId) : null;
+        AddInsight(
+            seriesInsights,
+            seriesId,
+            "Series",
+            series?.Name ?? episode.SeriesName ?? "Unknown series",
+            libraryName,
+            path,
+            size,
+            createdUtc);
+    }
+
+    private static void AddInsight(
+        IDictionary<Guid, MediaInsightAccumulator> target,
+        Guid itemId,
+        string mediaType,
+        string title,
+        string libraryName,
+        string? path,
+        long size,
+        DateTime createdUtc)
+    {
+        if (!target.TryGetValue(itemId, out MediaInsightAccumulator? insight))
+        {
+            insight = new MediaInsightAccumulator(itemId, mediaType, title, libraryName);
+            target[itemId] = insight;
+        }
+
+        insight.SizeBytes += Math.Max(0, size);
+        insight.FileCount++;
+        if (createdUtc > insight.DateCreatedUtc)
+        {
+            insight.DateCreatedUtc = createdUtc;
+        }
+
+        if (string.IsNullOrWhiteSpace(insight.Path) && !string.IsNullOrWhiteSpace(path))
+        {
+            insight.Path = path;
+        }
+    }
+
+    private static List<GrowthPoint> BuildTimeline(IEnumerable<TimelineSource> sources)
+    {
+        long cumulativeSize = 0;
+        int cumulativeFiles = 0;
+        List<GrowthPoint> points = [];
+        foreach (var day in sources
+            .GroupBy(source => source.DateCreatedUtc.Date)
+            .OrderBy(group => group.Key))
+        {
+            cumulativeSize += day.Sum(source => source.SizeBytes);
+            cumulativeFiles += day.Count();
+            points.Add(new GrowthPoint
+            {
+                DateUtc = DateTime.SpecifyKind(day.Key, DateTimeKind.Utc),
+                CumulativeSizeBytes = cumulativeSize,
+                CumulativeFileCount = cumulativeFiles
+            });
+        }
+
+        return points;
+    }
+
+    private static List<MediaInsight> BuildInsights(IEnumerable<MediaInsightAccumulator> source, bool latest)
+    {
+        IOrderedEnumerable<MediaInsightAccumulator> ordered = latest
+            ? source.OrderByDescending(item => item.DateCreatedUtc).ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            : source.OrderByDescending(item => item.SizeBytes).ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase);
+
+        return ordered.Take(100).Select(item => new MediaInsight
+        {
+            ItemId = item.ItemId,
+            MediaType = item.MediaType,
+            Title = item.Title,
+            LibraryName = item.LibraryName,
+            SizeBytes = item.SizeBytes,
+            DateCreatedUtc = item.DateCreatedUtc,
+            Path = item.Path,
+            FileCount = item.FileCount
+        }).ToList();
+    }
+
+    private static DateTime NormalizeUtc(DateTime value)
+    {
+        if (value == default)
+        {
+            return DateTime.UtcNow;
+        }
+
+        return value.Kind == DateTimeKind.Utc ? value : value.ToUniversalTime();
     }
 
     private static void AnalyzeSource(
@@ -355,4 +494,25 @@ public sealed class LibraryStatisticsService
             return 0;
         }
     }
+
+    private sealed class MediaInsightAccumulator(Guid itemId, string mediaType, string title, string libraryName)
+    {
+        internal Guid ItemId { get; } = itemId;
+
+        internal string MediaType { get; } = mediaType;
+
+        internal string Title { get; } = title;
+
+        internal string LibraryName { get; } = libraryName;
+
+        internal long SizeBytes { get; set; }
+
+        internal DateTime DateCreatedUtc { get; set; }
+
+        internal string Path { get; set; } = string.Empty;
+
+        internal int FileCount { get; set; }
+    }
+
+    private readonly record struct TimelineSource(DateTime DateCreatedUtc, long SizeBytes);
 }

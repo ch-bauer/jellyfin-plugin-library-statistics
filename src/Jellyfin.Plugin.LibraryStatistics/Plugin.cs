@@ -27,7 +27,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     /// <inheritdoc />
     public override string Description =>
-        "Read-only library statistics and merged-version duplicate analysis with exact paths and MediaInfo.";
+        "Read-only library statistics, trends, media insights, and merged-version analysis.";
 
     /// <inheritdoc />
     public IEnumerable<PluginPageInfo> GetPages()

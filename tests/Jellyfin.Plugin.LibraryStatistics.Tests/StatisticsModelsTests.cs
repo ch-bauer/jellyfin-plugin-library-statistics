@@ -56,4 +56,45 @@ public sealed class StatisticsModelsTests
         Assert.Equal(3840, stream.Width);
         Assert.Equal("HDR10", stream.VideoRange);
     }
+
+    [Fact]
+    public void TrendsAndInsights_RoundTripTimelineAndSeriesTotals()
+    {
+        var expected = new StatisticsResult
+        {
+            GrowthTimeline =
+            [
+                new GrowthPoint
+                {
+                    DateUtc = new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc),
+                    CumulativeSizeBytes = 4_096,
+                    CumulativeFileCount = 3
+                }
+            ],
+            LargestSeries =
+            [
+                new MediaInsight
+                {
+                    ItemId = Guid.NewGuid(),
+                    MediaType = "Series",
+                    Title = "Example series",
+                    LibraryName = "Shows",
+                    SizeBytes = 4_096,
+                    FileCount = 3,
+                    Path = "/media/shows/example/s01e01.mkv",
+                    DateCreatedUtc = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc)
+                }
+            ]
+        };
+
+        var json = JsonSerializer.Serialize(expected, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var actual = JsonSerializer.Deserialize<StatisticsResult>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        var point = Assert.Single(actual!.GrowthTimeline);
+        var series = Assert.Single(actual.LargestSeries);
+        Assert.Equal(4_096, point.CumulativeSizeBytes);
+        Assert.Equal(3, point.CumulativeFileCount);
+        Assert.Equal("Example series", series.Title);
+        Assert.Equal(3, series.FileCount);
+    }
 }

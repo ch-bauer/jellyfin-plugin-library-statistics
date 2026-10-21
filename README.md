@@ -23,6 +23,8 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 - Per-library storage, movies, episodes, other videos and audio tracks.
 - Jellyfin Helper-style donut charts for containers, resolutions, video codecs, audio
   codecs and dynamic range.
+- A storage or media-file growth timeline reconstructed from Jellyfin's indexed dates.
+- Scrollable Largest and Latest views for movies and aggregate series storage.
 - Movies and series episodes that Jellyfin has grouped as multiple merged versions.
 - The exact indexed path, container, size, runtime and video/audio/subtitle MediaInfo for
   every version.
@@ -78,7 +80,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.1.1.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.1.2.0.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub
