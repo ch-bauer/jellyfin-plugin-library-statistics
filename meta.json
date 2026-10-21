@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Matches the established plugin family more closely: a muted catalog icon and a configuration page that inherits Jellyfin's active theme colors and native controls.",
+  "changelog": "Fixes repeated merged-movie groups, adds Jellyfin Helper-style donut charts, corrects unreadable select menus, clarifies library/type badges, and aligns the icon and page with Jellyfin's active theme.",
   "description": "Scan selected Jellyfin libraries, inspect media statistics, and compare Jellyfin merged versions with paths and MediaInfo.",
   "guid": "102f0695-0752-4348-95ac-01f2825db6cb",
   "name": "Library Statistics",

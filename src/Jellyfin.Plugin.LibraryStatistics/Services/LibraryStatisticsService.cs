@@ -77,6 +77,7 @@ public sealed class LibraryStatisticsService
         Stopwatch stopwatch = Stopwatch.StartNew();
         StatisticsResult result = new();
         StatisticsAccumulator total = new();
+        HashSet<string> duplicateSourceSets = new(StringComparer.Ordinal);
         HashSet<string> excluded = new(
             Plugin.Instance?.Configuration.ExcludedLibraryIds ?? [],
             StringComparer.OrdinalIgnoreCase);
@@ -101,6 +102,7 @@ public sealed class LibraryStatisticsService
                 CollectionType = folder.CollectionType?.ToString() ?? "mixed"
             };
             StatisticsAccumulator accumulator = new();
+            HashSet<string> analyzedPaths = new(StringComparer.Ordinal);
 
             IReadOnlyList<BaseItem> items = _libraryManager.GetItemList(new InternalItemsQuery
             {
@@ -113,7 +115,13 @@ public sealed class LibraryStatisticsService
             foreach (BaseItem item in items)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                AnalyzeItem(item, libraryName, accumulator, result.DuplicateGroups);
+                AnalyzeItem(
+                    item,
+                    libraryName,
+                    accumulator,
+                    analyzedPaths,
+                    duplicateSourceSets,
+                    result.DuplicateGroups);
             }
 
             accumulator.ApplyTo(stats);
@@ -145,6 +153,8 @@ public sealed class LibraryStatisticsService
         BaseItem item,
         string libraryName,
         StatisticsAccumulator accumulator,
+        ISet<string> analyzedPaths,
+        ISet<string> duplicateSourceSets,
         ICollection<DuplicateGroup> duplicateGroups)
     {
         MediaKind kind = item switch
@@ -163,12 +173,21 @@ public sealed class LibraryStatisticsService
 
         if (sources.Count == 0)
         {
-            AnalyzeFallback(item, kind, accumulator);
+            if (analyzedPaths.Add(MediaSourceIdentity.PathKey(item.Path)))
+            {
+                AnalyzeFallback(item, kind, accumulator);
+            }
+
             return;
         }
 
         foreach (MediaSourceInfo source in sources)
         {
+            if (!analyzedPaths.Add(MediaSourceIdentity.PathKey(source.Path)))
+            {
+                continue;
+            }
+
             long size = source.Size.GetValueOrDefault() > 0
                 ? source.Size.GetValueOrDefault()
                 : MeasureFile(source.Path);
@@ -178,7 +197,14 @@ public sealed class LibraryStatisticsService
 
         if (sources.Count > 1 && item is Movie or Episode)
         {
-            duplicateGroups.Add(BuildDuplicateGroup(item, libraryName, sources));
+            string mediaType = item is Movie ? "Movie" : "Series";
+            string sourceSetKey = MediaSourceIdentity.SourceSetKey(
+                mediaType,
+                sources.Select(source => source.Path));
+            if (duplicateSourceSets.Add(sourceSetKey))
+            {
+                duplicateGroups.Add(BuildDuplicateGroup(item, libraryName, sources));
+            }
         }
     }
 
