@@ -50,6 +50,18 @@ public class StatisticsSummary
     /// <summary>Gets or sets the audio-track count.</summary>
     public int AudioCount { get; set; }
 
+    /// <summary>Gets or sets measured movie bytes.</summary>
+    public long MovieSizeBytes { get; set; }
+
+    /// <summary>Gets or sets measured episode bytes.</summary>
+    public long EpisodeSizeBytes { get; set; }
+
+    /// <summary>Gets or sets measured other-video bytes.</summary>
+    public long OtherVideoSizeBytes { get; set; }
+
+    /// <summary>Gets or sets measured audio bytes.</summary>
+    public long AudioSizeBytes { get; set; }
+
     /// <summary>Gets or sets container statistics.</summary>
     public List<BreakdownEntry> Containers { get; set; } = [];
 

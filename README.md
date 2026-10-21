@@ -19,10 +19,12 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 
 ## What it shows
 
-- Total measured storage and media-file counts.
-- Per-library storage, movies, episodes, other videos and audio tracks.
-- Jellyfin Helper-style donut charts for containers, resolutions, video codecs, audio
-  codecs and dynamic range.
+- Jellyfin Helper-style category cards for movies, TV shows, music, other video and total
+  storage.
+- A storage-distribution bar that shows how much space each media category uses.
+- A storage-based per-library breakdown for movies, TV shows, other video and audio.
+- Per-library or whole-server donut charts for containers, resolutions, video codecs,
+  audio codecs and dynamic range.
 - A storage or media-file growth timeline reconstructed from Jellyfin's indexed dates.
 - Scrollable Largest and Latest views for movies and aggregate series storage.
 - Movies and series episodes that Jellyfin has grouped as multiple merged versions.
@@ -49,7 +51,9 @@ Open **Dashboard → Plugins → Library Statistics**.
 
 - Use **Settings** to exclude libraries from scans.
 - Select the circular scan button at the top to refresh the dashboard.
-- Use **Duplicates** to compare merged versions and **Media formats** for the donut charts.
+- Use **Duplicates** to compare merged and separately indexed duplicate versions.
+- Use **Media formats** to switch the donut charts between the whole server and one
+  library.
 
 Exclusions are stored by Jellyfin virtual-folder ID, so renaming a library does not include
 it again accidentally.

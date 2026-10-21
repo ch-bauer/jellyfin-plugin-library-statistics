@@ -23,6 +23,9 @@ public sealed class StatisticsAccumulatorTests
         Assert.Equal(3_000, summary.TotalSizeBytes);
         Assert.Equal(1, summary.MovieCount);
         Assert.Equal(1, summary.EpisodeCount);
+        Assert.Equal(1_000, summary.MovieSizeBytes);
+        Assert.Equal(2_000, summary.EpisodeSizeBytes);
+        Assert.Equal(0, summary.AudioSizeBytes);
         var container = Assert.Single(summary.Containers);
         Assert.Equal("MKV", container.Label, ignoreCase: true);
         Assert.Equal(2, container.Count);

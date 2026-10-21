@@ -23,6 +23,14 @@ internal sealed class StatisticsAccumulator
 
     internal int AudioCount { get; private set; }
 
+    internal long MovieSizeBytes { get; private set; }
+
+    internal long EpisodeSizeBytes { get; private set; }
+
+    internal long OtherVideoSizeBytes { get; private set; }
+
+    internal long AudioSizeBytes { get; private set; }
+
     internal void AddMedia(long sizeBytes, MediaKind kind)
     {
         MediaFileCount++;
@@ -31,15 +39,19 @@ internal sealed class StatisticsAccumulator
         {
             case MediaKind.Movie:
                 MovieCount++;
+                MovieSizeBytes += Math.Max(0, sizeBytes);
                 break;
             case MediaKind.Episode:
                 EpisodeCount++;
+                EpisodeSizeBytes += Math.Max(0, sizeBytes);
                 break;
             case MediaKind.Audio:
                 AudioCount++;
+                AudioSizeBytes += Math.Max(0, sizeBytes);
                 break;
             default:
                 OtherVideoCount++;
+                OtherVideoSizeBytes += Math.Max(0, sizeBytes);
                 break;
         }
     }
@@ -62,6 +74,10 @@ internal sealed class StatisticsAccumulator
         target.EpisodeCount += EpisodeCount;
         target.OtherVideoCount += OtherVideoCount;
         target.AudioCount += AudioCount;
+        target.MovieSizeBytes += MovieSizeBytes;
+        target.EpisodeSizeBytes += EpisodeSizeBytes;
+        target.OtherVideoSizeBytes += OtherVideoSizeBytes;
+        target.AudioSizeBytes += AudioSizeBytes;
         Merge(_containers, target._containers);
         Merge(_resolutions, target._resolutions);
         Merge(_videoCodecs, target._videoCodecs);
@@ -77,6 +93,10 @@ internal sealed class StatisticsAccumulator
         summary.EpisodeCount = EpisodeCount;
         summary.OtherVideoCount = OtherVideoCount;
         summary.AudioCount = AudioCount;
+        summary.MovieSizeBytes = MovieSizeBytes;
+        summary.EpisodeSizeBytes = EpisodeSizeBytes;
+        summary.OtherVideoSizeBytes = OtherVideoSizeBytes;
+        summary.AudioSizeBytes = AudioSizeBytes;
         summary.Containers = Convert(_containers);
         summary.Resolutions = Convert(_resolutions);
         summary.VideoCodecs = Convert(_videoCodecs);
