@@ -13,7 +13,7 @@
         "changelog": "Adds a Duplicates-tab checkbox that limits results to items Jellyfin itself exposes with multiple merged media sources.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.7.0/library-statistics_1.1.7.0.zip",
-        "checksum": "RELEASE_WORKFLOW_WILL_UPDATE",
+        "checksum": "a1bdd46e601fae55244c62287de5016b",
         "timestamp": "2026-10-21T00:00:00Z"
       },
       {
