@@ -3,6 +3,8 @@
 [![CI](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/actions/workflows/ci.yml/badge.svg)](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/ch-bauer/jellyfin-plugin-library-statistics)](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/latest)
 
+<img src="images/icon.png" alt="Library Statistics icon" width="128">
+
 A focused, read-only statistics plugin for **Jellyfin 10.11.11**. It is inspired by the library-analysis portion of [Jellyfin Helper](https://github.com/JellyPlugins/jellyfin-helper), without its cleanup, recommendation, discovery, Arr/Seerr, or web-client modification features.
 
 ## Install in Jellyfin
