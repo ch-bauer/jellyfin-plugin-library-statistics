@@ -12,7 +12,7 @@
         "changelog": "First public release. Includes a Jellyfin Helper-style dashboard, selectable library exclusions, media statistics, and a merged-version duplicate finder with exact paths and per-version MediaInfo.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.0.0/library-statistics_1.1.0.0.zip",
-        "checksum": "updated-by-release-workflow",
+        "checksum": "25198eae8ab2e0e0d411d16675c7e0f1",
         "timestamp": "2026-10-21T00:00:00.000Z"
       }
     ]
