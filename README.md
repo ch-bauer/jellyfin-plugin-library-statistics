@@ -1,77 +1,94 @@
-# Jellyfin Library Statistics
+<div align="center">
+  <img src="images/icon.png" alt="Library Statistics" width="128" />
+  <h1>Library Statistics for Jellyfin (Proof of Concept)</h1>
+  <p>Library storage, media-format statistics and merged-version duplicate analysis.</p>
+</div>
 
-[![CI](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/actions/workflows/ci.yml/badge.svg)](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/ch-bauer/jellyfin-plugin-library-statistics)](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/latest)
+> [!CAUTION]
+> **This is a proof of concept, written with AI.** It is provided for testing, with no
+> guarantee of support, bug fixes or troubleshooting. Test it before relying on it on a
+> production server.
 
-<img src="images/icon.png" alt="Library Statistics icon" width="128">
+Library Statistics scans the media already indexed by Jellyfin and turns its stored
+MediaInfo into a compact dashboard. It is read-only: it does not modify library items,
+media files, watch history or merged versions.
 
-A focused, read-only statistics plugin for **Jellyfin 10.11.11**. It is inspired by the library-analysis portion of [Jellyfin Helper](https://github.com/JellyPlugins/jellyfin-helper), without its cleanup, recommendation, discovery, Arr/Seerr, or web-client modification features.
+The scope and dashboard are based on the library-analysis part of
+[Jellyfin Helper](https://github.com/JellyPlugins/jellyfin-helper), without its cleanup,
+recommendation, discovery, Arr/Seerr or web-client modification features.
 
-## Install in Jellyfin
+## What it shows
 
-Add this repository URL in **Dashboard → Plugins → Repositories**:
+- Total measured storage and media-file counts.
+- Per-library storage, movies, episodes, other videos and audio tracks.
+- Jellyfin Helper-style donut charts for containers, resolutions, video codecs, audio
+  codecs and dynamic range.
+- Movies and series episodes that Jellyfin has grouped as multiple merged versions.
+- The exact indexed path, container, size, runtime and video/audio/subtitle MediaInfo for
+  every version.
+- The latest completed scan after a Jellyfin restart.
+
+## Merged-version duplicates
+
+The duplicate view uses Jellyfin's own merged media sources as its source of truth. It does
+not infer duplicates from similar titles, years or filenames.
+
+A movie is listed when its Jellyfin item has two or more distinct media paths. Series are
+checked per episode and displayed under the series title. When Jellyfin returns the same
+merged set through each underlying item, the plugin normalizes and sorts the paths so the
+group and its statistics are counted only once.
+
+Results can be filtered by media type, library, title, episode or path.
+
+## Configuration
+
+Open **Dashboard → Plugins → Library Statistics**.
+
+- Use **Settings** to exclude libraries from scans.
+- Select the circular scan button at the top to refresh the dashboard.
+- Use **Duplicates** to compare merged versions and **Media formats** for the donut charts.
+
+Exclusions are stored by Jellyfin virtual-folder ID, so renaming a library does not include
+it again accidentally.
+
+## Install from the plugin repository
+
+Add this URL in **Dashboard → Plugins → Repositories**:
 
 ```text
 https://raw.githubusercontent.com/ch-bauer/jellyfin-plugin-library-statistics/main/manifest.json
 ```
 
-Then open **Catalog**, find **Library Statistics**, install it, and restart Jellyfin.
+Install **Library Statistics** from the catalogue and restart Jellyfin.
 
-## What it shows
+## Manual install
 
-- Total measured storage and media-file count.
-- Per-library storage, movies, episodes, other videos, and audio tracks.
-- Container, resolution, video codec, audio codec, and dynamic-range breakdowns.
-- Movies and series episodes that Jellyfin has already grouped as multiple merged versions.
-- The exact path and MediaInfo streams for every version in a duplicate group.
-- The last completed scan after a server restart.
+Download the latest zip from
+[Releases](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases), extract
+it into its own folder inside Jellyfin's `plugins` directory, and restart the server.
 
-The dashboard closely follows Jellyfin Helper's compact layout, with Overview, Duplicates, Media formats, and Settings screens.
-
-## Duplicate finder
-
-The duplicate finder uses Jellyfin's merged media sources as its source of truth. A movie is listed when its Jellyfin item has two or more distinct media versions. For series, the same check is applied to each episode and the result is displayed under its series title. It does not infer duplicates from similar names, years, or filenames.
-
-Results can be filtered by movie or series, library, title, episode, or path. Each version shows its indexed filesystem path, container, size, runtime, and video, audio, and subtitle stream details already known to Jellyfin.
-
-## Library exclusions
-
-Open **Dashboard → Plugins → Library Statistics → Settings**. Check every library that should be excluded, save, and run a new scan. Exclusions are stored by Jellyfin virtual-folder ID, so renaming a library does not silently include it again.
+Common plugin directories are `/config/plugins/` in the official Docker image and
+`%ProgramData%\Jellyfin\Server\plugins\` on Windows.
 
 ## Build
 
-Requirements: .NET 9 SDK.
+Requires the .NET 9 SDK.
 
 ```powershell
 ./build.ps1
 ```
 
-The script runs the tests and creates `dist/library-statistics_1.1.1.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.1.1.0.zip`.
 
-## Build and release pipeline
-
-- Every push to `main` and every pull request restores, builds, tests, publishes, and retains a downloadable build artifact for 14 days.
-- Pushing a version tag such as `v1.1.1.0` reruns the tests, builds a minimal Jellyfin package, creates the GitHub release, calculates its MD5 checksum, and updates `manifest.json` automatically.
-- A release tag must match both the assembly version and `meta.json`; a mismatch stops the release before publishing.
-
-## Manual installation
-
-1. Build the plugin or extract the release zip.
-2. Copy its files into `LibraryStatistics_1.1.1.0/` inside Jellyfin's plugins directory.
-3. Restart Jellyfin.
-4. Open Library Statistics from the dashboard/sidebar, choose exclusions, and select **Scan libraries**.
-
-## How scanning works
-
-The plugin queries Jellyfin's indexed video and audio items beneath each included virtual folder. It reads Jellyfin's static media sources and stored stream metadata for codecs, dimensions, dynamic range, merged versions, and storage totals. Files that are offline or unavailable remain counted but contribute zero measured bytes.
-
-Audio-codec and other stream-based grouped sizes are attributed per media file. A file with more than one distinct audio codec contributes its full size to each codec, so those grouped sizes are useful for comparison but may exceed physical storage when added together.
+GitHub Actions restores, builds, tests and retains an artifact for every push and pull
+request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub
+release, calculates its MD5 and updates `manifest.json` automatically.
 
 ## Compatibility
 
-- Jellyfin 10.11.11
+- Jellyfin **10.11.11**
 - .NET 9
 
-## Origin and license
+## License
 
-The product scope and dashboard organization are based on Jellyfin Helper by JellyPlugins. This project is distributed under GPL-3.0-or-later; see `LICENSE`.
+GPL-3.0-or-later — see [LICENSE](LICENSE).
