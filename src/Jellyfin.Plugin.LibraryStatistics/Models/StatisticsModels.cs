@@ -171,6 +171,9 @@ public sealed class DuplicateGroup
     /// <summary>Gets or sets the containing library.</summary>
     public string LibraryName { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets a value indicating whether Jellyfin exposes multiple media sources for the item.</summary>
+    public bool IsMergedVersion { get; set; }
+
     /// <summary>Gets or sets Jellyfin's merged media versions.</summary>
     public List<MediaVersionDetail> Versions { get; set; } = [];
 }

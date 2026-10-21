@@ -19,6 +19,7 @@ public sealed class StatisticsModelsTests
                     MediaType = "Movie",
                     Title = "Example",
                     LibraryName = "Movies",
+                    IsMergedVersion = true,
                     Versions =
                     [
                         new MediaVersionDetail
@@ -51,6 +52,7 @@ public sealed class StatisticsModelsTests
         var version = Assert.Single(group.Versions);
         var stream = Assert.Single(version.Streams);
         Assert.Equal(expected.DuplicateGroups[0].ItemId, group.ItemId);
+        Assert.True(group.IsMergedVersion);
         Assert.Equal(@"D:\Movies\Example\Example.2160p.mkv", version.Path);
         Assert.Equal("HEVC", stream.Codec);
         Assert.Equal(3840, stream.Width);

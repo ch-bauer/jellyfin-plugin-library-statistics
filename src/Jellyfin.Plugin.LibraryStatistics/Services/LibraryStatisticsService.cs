@@ -426,6 +426,16 @@ public sealed class LibraryStatisticsService
         }
 
         candidate.LibraryNames.Add(libraryName);
+        if (sources
+            .Where(source => !string.IsNullOrWhiteSpace(source.Path))
+            .Select(source => MediaSourceIdentity.PathKey(source.Path))
+            .Distinct(StringComparer.Ordinal)
+            .Skip(1)
+            .Any())
+        {
+            candidate.IsMergedVersion = true;
+        }
+
         if (sources.Count > 0)
         {
             foreach (MediaSourceInfo source in sources)
@@ -491,6 +501,7 @@ public sealed class LibraryStatisticsService
                 Subtitle = candidate.Subtitle,
                 ProductionYear = candidate.ProductionYear,
                 LibraryName = string.Join(", ", candidate.LibraryNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)),
+                IsMergedVersion = candidate.IsMergedVersion,
                 Versions = candidate.Versions.Values
                     .OrderBy(version => version.Name, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(version => version.Path, StringComparer.OrdinalIgnoreCase)
@@ -595,6 +606,8 @@ public sealed class LibraryStatisticsService
         internal int? ProductionYear { get; } = productionYear;
 
         internal HashSet<string> LibraryNames { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        internal bool IsMergedVersion { get; set; }
 
         internal Dictionary<string, MediaVersionDetail> Versions { get; } = new(StringComparer.Ordinal);
     }
