@@ -13,7 +13,7 @@
         "changelog": "Fixes repeated merged-movie groups, adds Jellyfin Helper-style donut charts, corrects unreadable select menus, clarifies library/type badges, and aligns the icon and page with Jellyfin's active theme.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.1.0/library-statistics_1.1.1.0.zip",
-        "checksum": "updated-by-release-workflow",
+        "checksum": "08cd8df042cd7e21db6d20b530deeff3",
         "timestamp": "2026-10-21T00:00:00.000Z"
       },
       {
