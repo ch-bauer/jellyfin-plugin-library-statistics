@@ -27,7 +27,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     /// <inheritdoc />
     public override string Description =>
-        "Read-only media library scans with storage, format, codec, resolution, and dynamic-range statistics.";
+        "Read-only library statistics and merged-version duplicate analysis with exact paths and MediaInfo.";
 
     /// <inheritdoc />
     public IEnumerable<PluginPageInfo> GetPages()

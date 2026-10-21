@@ -2,5 +2,6 @@ bin/
 obj/
 publish/
 dist/
+package/
 .vs/
 *.user

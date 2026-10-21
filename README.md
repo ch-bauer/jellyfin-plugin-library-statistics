@@ -1,6 +1,19 @@
 # Jellyfin Library Statistics
 
+[![CI](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/actions/workflows/ci.yml/badge.svg)](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/ch-bauer/jellyfin-plugin-library-statistics)](https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/latest)
+
 A focused, read-only statistics plugin for **Jellyfin 10.11.11**. It is inspired by the library-analysis portion of [Jellyfin Helper](https://github.com/JellyPlugins/jellyfin-helper), without its cleanup, recommendation, discovery, Arr/Seerr, or web-client modification features.
+
+## Install in Jellyfin
+
+Add this repository URL in **Dashboard → Plugins → Repositories**:
+
+```text
+https://raw.githubusercontent.com/ch-bauer/jellyfin-plugin-library-statistics/main/manifest.json
+```
+
+Then open **Catalog**, find **Library Statistics**, install it, and restart Jellyfin.
 
 ## What it shows
 
@@ -32,6 +45,12 @@ Requirements: .NET 9 SDK.
 ```
 
 The script runs the tests and creates `dist/library-statistics_1.1.0.0.zip`.
+
+## Build and release pipeline
+
+- Every push to `main` and every pull request restores, builds, tests, publishes, and retains a downloadable build artifact for 14 days.
+- Pushing a version tag such as `v1.1.0.0` reruns the tests, builds a minimal Jellyfin package, creates the GitHub release, calculates its MD5 checksum, and updates `manifest.json` automatically.
+- A release tag must match both the assembly version and `meta.json`; a mismatch stops the release before publishing.
 
 ## Manual installation
 

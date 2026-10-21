@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Validate release version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          META_VERSION="$(jq -r '.version' meta.json)"
+          PROJECT_VERSION="$(sed -n 's:.*<AssemblyVersion>\(.*\)</AssemblyVersion>.*:\1:p' src/Jellyfin.Plugin.LibraryStatistics/Jellyfin.Plugin.LibraryStatistics.csproj)"
+          test "$VERSION" = "$META_VERSION"
+          test "$VERSION" = "$PROJECT_VERSION"
+
+      - name: Test
+        run: dotnet test Jellyfin.Plugin.LibraryStatistics.slnx -c Release
+
+      - name: Build
+        run: dotnet publish src/Jellyfin.Plugin.LibraryStatistics -c Release -o publish
+
+      - name: Package
+        id: package
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE="library-statistics_${VERSION}.zip"
+          mkdir package
+          cp publish/Jellyfin.Plugin.LibraryStatistics.dll package/
+          cp meta.json package/
+          touch -t 198001010000 package/*
+          (cd package && zip -X "../${PACKAGE}" ./*)
+          CHECKSUM="$(md5sum "$PACKAGE" | cut -d' ' -f1)"
+          echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "MD5: $CHECKSUM"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.package.outputs.package }}
+          generate_release_notes: true
+
+      - name: Update Jellyfin repository manifest
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+        run: |
+          VERSION="${VERSION#v}"
+          git switch main
+          jq --arg version "$VERSION" --arg checksum "$CHECKSUM" \
+            '.[0].versions |= map(if .version == $version then .checksum = $checksum else . end)' \
+            manifest.json > manifest.tmp
+          mv manifest.tmp manifest.json
+          if git diff --quiet -- manifest.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "Update manifest checksum for v${VERSION} [skip ci]"
+          git push origin main

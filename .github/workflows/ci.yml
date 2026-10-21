@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore Jellyfin.Plugin.LibraryStatistics.slnx
+
+      - name: Build
+        run: dotnet build Jellyfin.Plugin.LibraryStatistics.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Jellyfin.Plugin.LibraryStatistics.slnx -c Release --no-build
+
+      - name: Publish package contents
+        run: dotnet publish src/Jellyfin.Plugin.LibraryStatistics -c Release --no-build -o publish
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: library-statistics-${{ github.sha }}
+          path: |
+            publish/Jellyfin.Plugin.LibraryStatistics.dll
+            meta.json
+          if-no-files-found: error
+          retention-days: 14
