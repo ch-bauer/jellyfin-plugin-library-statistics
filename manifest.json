@@ -13,7 +13,7 @@
         "changelog": "Keeps name, library and file count, size, date, and path in stable aligned columns in the latest/largest media view.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.1.5.0/library-statistics_1.1.5.0.zip",
-        "checksum": "RELEASE_WORKFLOW_WILL_UPDATE",
+        "checksum": "712d16de74c97af232221af3453e73de",
         "timestamp": "2026-10-21T00:00:00Z"
       },
       {
