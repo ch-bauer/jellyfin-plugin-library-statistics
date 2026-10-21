@@ -44,6 +44,8 @@ the same merged set through each underlying item, the plugin normalizes the path
 group and its statistics are counted only once.
 
 Results can be filtered by media type, library, title, episode or path.
+Enable **Only Jellyfin merged versions** to exclude the additional provider-ID and
+title-based duplicate matches.
 
 ## Configuration
 
@@ -85,7 +87,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.1.6.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.1.7.0.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub
