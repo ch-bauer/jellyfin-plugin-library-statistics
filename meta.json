@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Fixes plugin startup on Jellyfin by removing native runtime assemblies from the package while retaining durable duplicate reviews and scan history.",
+  "changelog": "Aligns the dashboard with Jellyfin Helper, fixes library checkboxes and table colors, removes per-library scrolling, and adds duplicate-tab 4K/1080p and synchronized MediaInfo toggles.",
   "description": "Scan selected Jellyfin libraries, inspect storage, formats and trends, browse the latest or largest titles, and compare duplicate versions with paths and MediaInfo.",
   "guid": "102f0695-0752-4348-95ac-01f2825db6cb",
   "name": "Library Statistics",
@@ -8,7 +8,7 @@
   "owner": "Christian",
   "targetAbi": "10.11.11.0",
   "timestamp": "2026-10-22T00:00:00.000Z",
-  "version": "1.3.0.1",
+  "version": "1.3.0.2",
   "status": "Active",
   "autoUpdate": false
 }

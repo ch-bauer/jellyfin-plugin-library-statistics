@@ -76,7 +76,8 @@ Open **Dashboard → Plugins → Library Statistics**.
 - Select the circular scan button at the top to refresh the dashboard.
 - Use **Run full storage scan** in Settings when sidecar and trickplay totals also need to
   be refreshed.
-- Use **Duplicates** to compare merged and separately indexed duplicate versions.
+- Use **Duplicates** to compare merged and separately indexed duplicate versions, toggle
+  the exact 4K + 1080p allowance, and show or hide synchronized MediaInfo panels.
 - Use **Media formats** to switch the donut charts between the whole server and one
   library.
 
@@ -110,7 +111,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.3.0.1.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.2.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub
