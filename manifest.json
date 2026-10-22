@@ -13,7 +13,7 @@
         "changelog": "Adds fast background scans with progress, real scan-snapshot trends, persistent duplicate reviews, automatic 4K plus 1080p allowances, ambiguous multipart detection, series grouping, and a compact responsive UI.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.0/library-statistics_1.3.0.0.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "5a6ab9442feb60a4fd1abae4a99da4f8",
         "timestamp": "2026-10-22T00:00:00Z"
       },
       {
