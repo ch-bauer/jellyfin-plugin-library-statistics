@@ -13,7 +13,7 @@
         "changelog": "Prevents featurettes and unrelated videos from becoming episode duplicates by requiring matching episode provider metadata and comparable runtimes for cross-item matches.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.5/library-statistics_1.3.0.5.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "10e9a29541c1b5d5bc141625dd042772",
         "timestamp": "2026-10-23T00:00:00Z"
       },
       {
