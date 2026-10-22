@@ -41,9 +41,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           PACKAGE="library-statistics_${VERSION}.zip"
           mkdir package
-          cp publish/*.dll package/
-          cp publish/*.deps.json package/ 2>/dev/null || true
-          cp -r publish/runtimes package/ 2>/dev/null || true
+          cp publish/Jellyfin.Plugin.LibraryStatistics.dll package/
           cp meta.json package/
           find package -type f -exec touch -t 198001010000 {} +
           (cd package && zip -X -r "../${PACKAGE}" ./*)

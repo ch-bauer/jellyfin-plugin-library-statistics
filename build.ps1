@@ -7,7 +7,7 @@ $projectRoot = $PSScriptRoot
 $publishPath = Join-Path $projectRoot 'publish'
 $distPath = Join-Path $projectRoot 'dist'
 $packageContentPath = Join-Path $projectRoot 'package'
-$packagePath = Join-Path $distPath 'library-statistics_1.3.0.0.zip'
+$packagePath = Join-Path $distPath 'library-statistics_1.3.0.1.zip'
 
 dotnet test (Join-Path $projectRoot 'Jellyfin.Plugin.LibraryStatistics.slnx') -c $Configuration
 if (Test-Path -LiteralPath $publishPath) {
@@ -21,10 +21,7 @@ if (Test-Path -LiteralPath $packageContentPath) {
 }
 
 New-Item -ItemType Directory -Path $packageContentPath -Force | Out-Null
-Get-ChildItem -LiteralPath $publishPath -File | Where-Object Extension -in '.dll', '.json' | Copy-Item -Destination $packageContentPath -Force
-if (Test-Path -LiteralPath (Join-Path $publishPath 'runtimes')) {
-    Copy-Item (Join-Path $publishPath 'runtimes') $packageContentPath -Recurse -Force
-}
+Copy-Item (Join-Path $publishPath 'Jellyfin.Plugin.LibraryStatistics.dll') $packageContentPath -Force
 Copy-Item (Join-Path $projectRoot 'meta.json') $packageContentPath -Force
 Compress-Archive -Path (Join-Path $packageContentPath '*') -DestinationPath $packagePath -Force
 

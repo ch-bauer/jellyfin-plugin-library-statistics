@@ -1,7 +1,7 @@
 using System.Globalization;
+using System.Text.Json;
 using Jellyfin.Plugin.LibraryStatistics.Models;
 using MediaBrowser.Common.Configuration;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.LibraryStatistics.Services;
@@ -9,7 +9,14 @@ namespace Jellyfin.Plugin.LibraryStatistics.Services;
 /// <summary>Transactional storage for real scan snapshots and duplicate reviews.</summary>
 public sealed class StatisticsDatabase
 {
-    private readonly string _connectionString;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
+    };
+
+    private readonly string _path;
+    private readonly string _backupPath;
     private readonly ILogger<StatisticsDatabase> _logger;
     private readonly object _sync = new();
 
@@ -21,18 +28,10 @@ public sealed class StatisticsDatabase
 
     internal StatisticsDatabase(string dataPath, ILogger<StatisticsDatabase> logger)
     {
-        string path = Path.Combine(dataPath, "library-statistics.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        _connectionString = new SqliteConnectionStringBuilder
-        {
-            DataSource = path,
-            Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared,
-            Pooling = false,
-            DefaultTimeout = 5
-        }.ToString();
+        Directory.CreateDirectory(dataPath);
+        _path = Path.Combine(dataPath, "library-statistics-state.json");
+        _backupPath = _path + ".bak";
         _logger = logger;
-        Initialize();
     }
 
     /// <summary>Saves one successful scan snapshot.</summary>
@@ -40,21 +39,19 @@ public sealed class StatisticsDatabase
     {
         lock (_sync)
         {
-            using SqliteConnection connection = Open();
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = """
-                INSERT INTO scan_snapshots(scan_day, scanned_at_utc, total_size_bytes, media_file_count)
-                VALUES ($day, $at, $bytes, $files)
-                ON CONFLICT(scan_day) DO UPDATE SET
-                    scanned_at_utc = excluded.scanned_at_utc,
-                    total_size_bytes = excluded.total_size_bytes,
-                    media_file_count = excluded.media_file_count;
-                """;
-            command.Parameters.AddWithValue("$day", result.ScannedAtUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-            command.Parameters.AddWithValue("$at", result.ScannedAtUtc.ToString("O", CultureInfo.InvariantCulture));
-            command.Parameters.AddWithValue("$bytes", result.Total.TotalSizeBytes);
-            command.Parameters.AddWithValue("$files", result.Total.MediaFileCount);
-            command.ExecuteNonQuery();
+            DatabaseState state = LoadState();
+            string day = result.ScannedAtUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            ScanSnapshot snapshot = new()
+            {
+                Day = day,
+                ScannedAtUtc = result.ScannedAtUtc,
+                TotalSizeBytes = result.Total.TotalSizeBytes,
+                MediaFileCount = result.Total.MediaFileCount
+            };
+            int existing = state.Snapshots.FindIndex(item => item.Day.Equals(day, StringComparison.Ordinal));
+            if (existing >= 0) state.Snapshots[existing] = snapshot;
+            else state.Snapshots.Add(snapshot);
+            SaveState(state);
         }
     }
 
@@ -63,22 +60,15 @@ public sealed class StatisticsDatabase
     {
         lock (_sync)
         {
-            List<GrowthPoint> points = [];
-            using SqliteConnection connection = Open();
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "SELECT scanned_at_utc, total_size_bytes, media_file_count FROM scan_snapshots ORDER BY scanned_at_utc;";
-            using SqliteDataReader reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                points.Add(new GrowthPoint
+            return LoadState().Snapshots
+                .OrderBy(item => item.ScannedAtUtc)
+                .Select(item => new GrowthPoint
                 {
-                    DateUtc = DateTime.Parse(reader.GetString(0), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-                    CumulativeSizeBytes = reader.GetInt64(1),
-                    CumulativeFileCount = reader.GetInt32(2)
-                });
-            }
-
-            return points;
+                    DateUtc = item.ScannedAtUtc,
+                    CumulativeSizeBytes = item.TotalSizeBytes,
+                    CumulativeFileCount = item.MediaFileCount
+                })
+                .ToList();
         }
     }
 
@@ -87,30 +77,23 @@ public sealed class StatisticsDatabase
     {
         lock (_sync)
         {
-            using SqliteConnection connection = Open();
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = """
-                INSERT INTO duplicate_reviews(group_key, version_signature, allowed, note, updated_at_utc)
-                VALUES ($key, $signature, $allowed, $note, $at)
-                ON CONFLICT(group_key) DO UPDATE SET
-                    version_signature = excluded.version_signature,
-                    allowed = excluded.allowed,
-                    note = excluded.note,
-                    updated_at_utc = excluded.updated_at_utc;
-                """;
-            command.Parameters.AddWithValue("$key", groupKey);
-            command.Parameters.AddWithValue("$signature", versionSignature);
-            command.Parameters.AddWithValue("$allowed", allowed ? 1 : 0);
-            command.Parameters.AddWithValue("$note", (note ?? string.Empty).Trim());
-            command.Parameters.AddWithValue("$at", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
-            command.ExecuteNonQuery();
+            DatabaseState state = LoadState();
+            state.Reviews[groupKey] = new ReviewRecord
+            {
+                VersionSignature = versionSignature,
+                Allowed = allowed,
+                Note = (note ?? string.Empty).Trim(),
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+            SaveState(state);
         }
     }
 
     /// <summary>Applies saved and automatic review states to duplicate groups.</summary>
     public void ApplyReviews(IList<DuplicateGroup> groups, bool autoAllow4KAnd1080P)
     {
-        Dictionary<string, ReviewRecord> reviews = LoadReviews();
+        Dictionary<string, ReviewRecord> reviews;
+        lock (_sync) reviews = LoadState().Reviews;
         foreach (DuplicateGroup group in groups)
         {
             string signature = DuplicateReviewClassifier.VersionSignature(group.Versions);
@@ -137,67 +120,97 @@ public sealed class StatisticsDatabase
         }
     }
 
-    private Dictionary<string, ReviewRecord> LoadReviews()
+    private DatabaseState LoadState()
     {
-        Dictionary<string, ReviewRecord> reviews = new(StringComparer.Ordinal);
-        lock (_sync)
+        DatabaseState? state = TryLoad(_path);
+        if (state is not null) return Normalize(state);
+
+        state = TryLoad(_backupPath);
+        if (state is not null)
         {
-            using SqliteConnection connection = Open();
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "SELECT group_key, version_signature, allowed, note FROM duplicate_reviews;";
-            using SqliteDataReader reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                reviews[reader.GetString(0)] = new ReviewRecord(reader.GetString(1), reader.GetInt32(2) != 0, reader.GetString(3));
-            }
+            _logger.LogWarning("Library Statistics: recovered review state from its backup file.");
+            return Normalize(state);
         }
 
-        return reviews;
+        return new DatabaseState();
     }
 
-    private void Initialize()
+    private DatabaseState? TryLoad(string path)
     {
-        lock (_sync)
+        if (!File.Exists(path)) return null;
+        try
         {
-            try
-            {
-                using SqliteConnection connection = Open();
-                using SqliteCommand command = connection.CreateCommand();
-                command.CommandText = """
-                    PRAGMA journal_mode=WAL;
-                    PRAGMA synchronous=FULL;
-                    PRAGMA busy_timeout=5000;
-                    CREATE TABLE IF NOT EXISTS scan_snapshots(
-                        scan_day TEXT PRIMARY KEY,
-                        scanned_at_utc TEXT NOT NULL,
-                        total_size_bytes INTEGER NOT NULL,
-                        media_file_count INTEGER NOT NULL);
-                    CREATE TABLE IF NOT EXISTS duplicate_reviews(
-                        group_key TEXT PRIMARY KEY,
-                        version_signature TEXT NOT NULL,
-                        allowed INTEGER NOT NULL,
-                        note TEXT NOT NULL DEFAULT '',
-                        updated_at_utc TEXT NOT NULL);
-                    """;
-                command.ExecuteNonQuery();
-            }
-            catch (SqliteException ex)
-            {
-                _logger.LogError(ex, "Library Statistics: could not initialize the statistics database.");
-                throw;
-            }
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return JsonSerializer.Deserialize<DatabaseState>(stream, JsonOptions);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            _logger.LogError(ex, "Library Statistics: could not read persistent state from {Path}.", path);
+            return null;
         }
     }
 
-    private SqliteConnection Open()
+    private void SaveState(DatabaseState state)
     {
-        SqliteConnection connection = new(_connectionString);
-        connection.Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;";
-        command.ExecuteNonQuery();
-        return connection;
+        string temporaryPath = _path + ".tmp";
+        try
+        {
+            using (FileStream stream = new(
+                temporaryPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                4096,
+                FileOptions.WriteThrough))
+            {
+                JsonSerializer.Serialize(stream, state, JsonOptions);
+                stream.Flush(true);
+            }
+
+            if (File.Exists(_path)) File.Copy(_path, _backupPath, true);
+            File.Move(temporaryPath, _path, true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
     }
 
-    private sealed record ReviewRecord(string VersionSignature, bool Allowed, string Note);
+    private static DatabaseState Normalize(DatabaseState state)
+    {
+        state.Snapshots ??= [];
+        state.Reviews = state.Reviews is null
+            ? new Dictionary<string, ReviewRecord>(StringComparer.Ordinal)
+            : new Dictionary<string, ReviewRecord>(state.Reviews, StringComparer.Ordinal);
+        return state;
+    }
+
+    private sealed class DatabaseState
+    {
+        public List<ScanSnapshot> Snapshots { get; set; } = [];
+
+        public Dictionary<string, ReviewRecord> Reviews { get; set; } = new(StringComparer.Ordinal);
+    }
+
+    private sealed class ScanSnapshot
+    {
+        public string Day { get; set; } = string.Empty;
+
+        public DateTime ScannedAtUtc { get; set; }
+
+        public long TotalSizeBytes { get; set; }
+
+        public int MediaFileCount { get; set; }
+    }
+
+    private sealed class ReviewRecord
+    {
+        public string VersionSignature { get; set; } = string.Empty;
+
+        public bool Allowed { get; set; }
+
+        public string Note { get; set; } = string.Empty;
+
+        public DateTime UpdatedAtUtc { get; set; }
+    }
 }

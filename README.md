@@ -63,10 +63,10 @@ Results can be filtered by media type, library, title, episode or path.
 Enable **Only Jellyfin merged versions** to exclude the additional provider-ID and
 title-based duplicate matches.
 
-Review decisions are stored in a transactional SQLite database. A decision applies only
-to the exact version set that was reviewed; adding or replacing a version returns the
-group to review. Paths identify the version set but are never used to decide whether two
-items are duplicates.
+Review decisions are stored in an atomically replaced state database with automatic
+backup recovery. A decision applies only to the exact version set that was reviewed;
+adding or replacing a version returns the group to review. Paths identify the version
+set but are never used to decide whether two items are duplicates.
 
 ## Configuration
 
@@ -110,7 +110,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.3.0.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.1.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub
