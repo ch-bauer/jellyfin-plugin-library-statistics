@@ -27,12 +27,19 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
   video codecs, video and music audio codecs, bitrate tiers, dynamic range, and audio and
   subtitle languages.
 - Expandable format rows that reveal the exact matching file paths.
-- A storage or media-file growth timeline reconstructed from Jellyfin's indexed dates.
+- A real storage and media-file timeline built from successful daily scan snapshots.
 - Scrollable Largest and Latest views for movies and aggregate series storage.
 - Movies and series episodes that Jellyfin has grouped as multiple merged versions.
 - The exact indexed path, container, size, runtime and video/audio/subtitle MediaInfo for
   every version.
 - The latest completed scan after a Jellyfin restart.
+- Fast background scans with visible phase and percentage progress. The normal scan uses
+  Jellyfin's index; a separate full storage scan also measures images, metadata,
+  subtitles and trickplay.
+- Persistent duplicate review states. Any result can be marked allowed, and an optional
+  rule automatically allows exactly one 4K plus one 1080p version.
+- Series-level expandable duplicate groups and a separate view for ambiguous multipart
+  episodes.
 
 ## Merged-version duplicates
 
@@ -56,12 +63,19 @@ Results can be filtered by media type, library, title, episode or path.
 Enable **Only Jellyfin merged versions** to exclude the additional provider-ID and
 title-based duplicate matches.
 
+Review decisions are stored in a transactional SQLite database. A decision applies only
+to the exact version set that was reviewed; adding or replacing a version returns the
+group to review. Paths identify the version set but are never used to decide whether two
+items are duplicates.
+
 ## Configuration
 
 Open **Dashboard → Plugins → Library Statistics**.
 
 - Use **Settings** to exclude libraries from scans.
 - Select the circular scan button at the top to refresh the dashboard.
+- Use **Run full storage scan** in Settings when sidecar and trickplay totals also need to
+  be refreshed.
 - Use **Duplicates** to compare merged and separately indexed duplicate versions.
 - Use **Media formats** to switch the donut charts between the whole server and one
   library.
@@ -96,7 +110,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.2.1.0.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.0.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

@@ -204,6 +204,9 @@ public sealed class MediaVersionDetail
 /// <summary>A Jellyfin item with more than one merged media version.</summary>
 public sealed class DuplicateGroup
 {
+    /// <summary>Gets or sets the stable metadata-derived group key.</summary>
+    public string GroupKey { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the Jellyfin item id.</summary>
     public Guid ItemId { get; set; }
 
@@ -225,8 +228,87 @@ public sealed class DuplicateGroup
     /// <summary>Gets or sets a value indicating whether Jellyfin exposes multiple media sources for the item.</summary>
     public bool IsMergedVersion { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether the sources may represent episode parts rather than quality versions.</summary>
+    public bool IsAmbiguous { get; set; }
+
+    /// <summary>Gets or sets the persisted review state.</summary>
+    public string ReviewState { get; set; } = DuplicateReviewStates.Unreviewed;
+
+    /// <summary>Gets or sets an optional reviewer note.</summary>
+    public string ReviewNote { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the Jellyfin season number for series entries.</summary>
+    public int? SeasonNumber { get; set; }
+
+    /// <summary>Gets or sets the Jellyfin episode number for series entries.</summary>
+    public int? EpisodeNumber { get; set; }
+
     /// <summary>Gets or sets Jellyfin's merged media versions.</summary>
     public List<MediaVersionDetail> Versions { get; set; } = [];
+}
+
+/// <summary>Known duplicate review states.</summary>
+public static class DuplicateReviewStates
+{
+    /// <summary>The group requires review.</summary>
+    public const string Unreviewed = "Unreviewed";
+
+    /// <summary>An administrator explicitly allowed the group.</summary>
+    public const string Allowed = "Allowed";
+
+    /// <summary>The configured 4K plus 1080p rule allowed the group.</summary>
+    public const string AutoAllowed = "AutoAllowed";
+
+    /// <summary>The group may contain episode parts rather than duplicate versions.</summary>
+    public const string Ambiguous = "Ambiguous";
+}
+
+/// <summary>A request to change one duplicate review.</summary>
+public sealed class DuplicateReviewRequest
+{
+    /// <summary>Gets or sets a value indicating whether the duplicate is allowed.</summary>
+    public bool Allowed { get; set; }
+
+    /// <summary>Gets or sets an optional review note.</summary>
+    public string Note { get; set; } = string.Empty;
+}
+
+/// <summary>Current state of a background library scan.</summary>
+public sealed class ScanProgress
+{
+    /// <summary>Gets or sets the scan identifier.</summary>
+    public Guid ScanId { get; set; }
+
+    /// <summary>Gets or sets the machine-readable status.</summary>
+    public string Status { get; set; } = "Idle";
+
+    /// <summary>Gets or sets the current phase.</summary>
+    public string Phase { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the current library.</summary>
+    public string LibraryName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the completed percentage.</summary>
+    public int Percent { get; set; }
+
+    /// <summary>Gets or sets the number of processed media items.</summary>
+    public int ProcessedItems { get; set; }
+
+    /// <summary>Gets or sets the total number of media items when known.</summary>
+    public int TotalItems { get; set; }
+
+    /// <summary>Gets or sets an error message for failed scans.</summary>
+    public string Error { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets whether the scan includes filesystem sidecars.</summary>
+    public bool FullStorageScan { get; set; }
+}
+
+/// <summary>Options for starting a scan.</summary>
+public sealed class StartScanRequest
+{
+    /// <summary>Gets or sets whether to include the slower filesystem scan.</summary>
+    public bool FullStorageScan { get; set; }
 }
 
 /// <summary>One cumulative point in the media-library growth timeline.</summary>

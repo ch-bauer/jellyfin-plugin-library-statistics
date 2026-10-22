@@ -19,6 +19,7 @@ public sealed class LibraryStatisticsService
     private readonly IMediaSourceManager _mediaSourceManager;
     private readonly StatisticsStore _store;
     private readonly LibraryStorageScanner _storageScanner;
+    private readonly StatisticsDatabase _database;
     private readonly ILogger<LibraryStatisticsService> _logger;
     private readonly SemaphoreSlim _scanLock = new(1, 1);
 
@@ -28,12 +29,14 @@ public sealed class LibraryStatisticsService
         IMediaSourceManager mediaSourceManager,
         StatisticsStore store,
         LibraryStorageScanner storageScanner,
+        StatisticsDatabase database,
         ILogger<LibraryStatisticsService> logger)
     {
         _libraryManager = libraryManager;
         _mediaSourceManager = mediaSourceManager;
         _store = store;
         _storageScanner = storageScanner;
+        _database = database;
         _logger = logger;
     }
 
@@ -58,7 +61,10 @@ public sealed class LibraryStatisticsService
     }
 
     /// <summary>Runs one scan, or returns <see langword="null"/> when another scan is active.</summary>
-    public async Task<StatisticsResult?> TryScanAsync(CancellationToken cancellationToken)
+    public async Task<StatisticsResult?> TryScanAsync(
+        bool fullStorageScan,
+        Action<ScanProgress>? reportProgress,
+        CancellationToken cancellationToken)
     {
         if (!await _scanLock.WaitAsync(0, cancellationToken).ConfigureAwait(false))
         {
@@ -67,7 +73,9 @@ public sealed class LibraryStatisticsService
 
         try
         {
-            return await Task.Run(() => Scan(cancellationToken), cancellationToken).ConfigureAwait(false);
+            return await Task.Run(
+                () => Scan(fullStorageScan, reportProgress, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -75,15 +83,46 @@ public sealed class LibraryStatisticsService
         }
     }
 
-    private StatisticsResult Scan(CancellationToken cancellationToken)
+    /// <summary>Loads the latest result with current review states and real scan history.</summary>
+    public StatisticsResult? GetLatest()
+    {
+        StatisticsResult? result = _store.Load();
+        if (result is null) return null;
+        ApplyStoredState(result);
+        return result;
+    }
+
+    /// <summary>Changes the explicit review state for one duplicate group.</summary>
+    public DuplicateGroup? SetDuplicateReview(string groupKey, DuplicateReviewRequest request)
+    {
+        StatisticsResult? result = _store.Load();
+        DuplicateGroup? group = result?.DuplicateGroups.FirstOrDefault(item =>
+            item.GroupKey.Equals(groupKey, StringComparison.Ordinal));
+        if (result is null || group is null) return null;
+
+        _database.SaveReview(
+            group.GroupKey,
+            DuplicateReviewClassifier.VersionSignature(group.Versions),
+            request.Allowed,
+            request.Note);
+        ApplyStoredState(result);
+        _store.Save(result);
+        return result.DuplicateGroups.First(item => item.GroupKey.Equals(groupKey, StringComparison.Ordinal));
+    }
+
+    private StatisticsResult Scan(
+        bool fullStorageScan,
+        Action<ScanProgress>? reportProgress,
+        CancellationToken cancellationToken)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
+        StatisticsResult? previousResult = fullStorageScan ? null : _store.Load();
         StatisticsResult result = new();
         StatisticsAccumulator total = new();
         Dictionary<string, DuplicateAccumulator> duplicateCandidates = new(StringComparer.Ordinal);
         Dictionary<Guid, MediaInsightAccumulator> movieInsights = [];
         Dictionary<Guid, MediaInsightAccumulator> seriesInsights = [];
-        List<TimelineSource> timelineSources = [];
+        Dictionary<Guid, BaseItem?> entityCache = [];
         HashSet<string> excluded = new(
             Plugin.Instance?.Configuration.ExcludedLibraryIds ?? [],
             StringComparer.OrdinalIgnoreCase);
@@ -95,9 +134,13 @@ public sealed class LibraryStatisticsService
             .ToList();
 
         _logger.LogInformation("Library Statistics: scanning {Count} included libraries.", folders.Count);
+        int processedItems = 0;
+        int discoveredItems = 0;
+        Report(reportProgress, "Scanning", "Preparing libraries", string.Empty, 2, 0, 0, fullStorageScan);
 
-        foreach (var folder in folders)
+        for (int folderIndex = 0; folderIndex < folders.Count; folderIndex++)
         {
+            var folder = folders[folderIndex];
             cancellationToken.ThrowIfCancellationRequested();
             Guid libraryId = Guid.Parse(folder.ItemId);
             string libraryName = folder.Name ?? "Unknown";
@@ -117,9 +160,13 @@ public sealed class LibraryStatisticsService
                 IsFolder = false,
                 MediaTypes = [MediaType.Video, MediaType.Audio]
             });
+            discoveredItems += items.Count;
+            Report(reportProgress, "Scanning", "Reading Jellyfin metadata", libraryName,
+                ScanPercent(folderIndex, folders.Count, 0), processedItems, discoveredItems, fullStorageScan);
 
-            foreach (BaseItem item in items)
+            for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
             {
+                BaseItem item = items[itemIndex];
                 cancellationToken.ThrowIfCancellationRequested();
                 AnalyzeItem(
                     item,
@@ -129,23 +176,42 @@ public sealed class LibraryStatisticsService
                     duplicateCandidates,
                     movieInsights,
                     seriesInsights,
-                    timelineSources);
+                    entityCache);
+                processedItems++;
+                if (itemIndex % 25 == 0 || itemIndex == items.Count - 1)
+                {
+                    Report(reportProgress, "Scanning", "Reading Jellyfin metadata", libraryName,
+                        ScanPercent(folderIndex, folders.Count, items.Count == 0 ? 1 : (itemIndex + 1d) / items.Count),
+                        processedItems, discoveredItems, fullStorageScan);
+                }
             }
 
-            _storageScanner.Scan(folder.Locations, accumulator, cancellationToken);
+            if (fullStorageScan)
+            {
+                Report(reportProgress, "Scanning", "Measuring sidecar storage", libraryName,
+                    Math.Min(94, ScanPercent(folderIndex + 1, folders.Count, 0)), processedItems, discoveredItems, true);
+                _storageScanner.Scan(folder.Locations, accumulator, cancellationToken);
+            }
 
             accumulator.ApplyTo(stats);
+            if (!fullStorageScan)
+            {
+                LibraryScanStatistics? previousLibrary = previousResult?.Libraries.FirstOrDefault(item =>
+                    item.LibraryId.Equals(stats.LibraryId, StringComparison.OrdinalIgnoreCase));
+                if (previousLibrary is not null) RestoreAuxiliary(previousLibrary, stats);
+            }
             accumulator.MergeInto(total);
             result.Libraries.Add(stats);
         }
 
+        Report(reportProgress, "Scanning", "Classifying duplicates", string.Empty, 95, processedItems, discoveredItems, fullStorageScan);
         result.DuplicateGroups = BuildDuplicateGroups(duplicateCandidates.Values)
             .OrderBy(group => group.MediaType, StringComparer.OrdinalIgnoreCase)
             .ThenBy(group => group.Title, StringComparer.OrdinalIgnoreCase)
             .ThenBy(group => group.Subtitle, StringComparer.OrdinalIgnoreCase)
             .ToList();
         total.ApplyTo(result.Total);
-        result.GrowthTimeline = BuildTimeline(timelineSources);
+        if (!fullStorageScan && previousResult is not null) AggregateAuxiliary(result.Libraries, result.Total);
         result.LargestMovies = BuildInsights(movieInsights.Values, latest: false);
         result.LatestMovies = BuildInsights(movieInsights.Values, latest: true);
         result.LargestSeries = BuildInsights(seriesInsights.Values, latest: false);
@@ -153,7 +219,11 @@ public sealed class LibraryStatisticsService
         stopwatch.Stop();
         result.DurationMilliseconds = stopwatch.ElapsedMilliseconds;
         result.ScannedAtUtc = DateTime.UtcNow;
+        _database.ApplyReviews(result.DuplicateGroups, Plugin.Instance?.Configuration.AutoAllow4KAnd1080P ?? false);
+        _database.SaveSnapshot(result);
+        result.GrowthTimeline = _database.LoadTimeline();
         _store.Save(result);
+        Report(reportProgress, "Completed", "Scan complete", string.Empty, 100, processedItems, discoveredItems, fullStorageScan);
 
         _logger.LogInformation(
             "Library Statistics: scan complete with {Files} media files, {Bytes} measured bytes, and {Duplicates} merged-version groups in {Elapsed} ms.",
@@ -172,7 +242,7 @@ public sealed class LibraryStatisticsService
         IDictionary<string, DuplicateAccumulator> duplicateCandidates,
         IDictionary<Guid, MediaInsightAccumulator> movieInsights,
         IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
-        ICollection<TimelineSource> timelineSources)
+        IDictionary<Guid, BaseItem?> entityCache)
     {
         MediaKind kind = item switch
         {
@@ -188,14 +258,14 @@ public sealed class LibraryStatisticsService
             .Select(group => group.First())
             .ToList();
 
-        TrackDuplicateCandidate(item, libraryName, sources, duplicateCandidates);
+        TrackDuplicateCandidate(item, libraryName, sources, duplicateCandidates, entityCache);
 
         if (sources.Count == 0)
         {
             if (analyzedPaths.Add(MediaSourceIdentity.PathKey(item.Path)))
             {
                 long size = AnalyzeFallback(item, kind, accumulator);
-                TrackMedia(item, libraryName, item.Path, size, movieInsights, seriesInsights, timelineSources);
+                TrackMedia(item, libraryName, item.Path, size, movieInsights, seriesInsights, entityCache);
             }
 
             return;
@@ -213,7 +283,7 @@ public sealed class LibraryStatisticsService
                 : MeasureFile(source.Path);
             IReadOnlyList<MediaStream> streams = source.MediaStreams ?? [];
             AnalyzeSource(source.Path, source.Container, size, source.RunTimeTicks ?? item.RunTimeTicks, streams, kind, accumulator);
-            TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, timelineSources);
+            TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, entityCache);
         }
 
     }
@@ -237,7 +307,7 @@ public sealed class LibraryStatisticsService
         long size,
         IDictionary<Guid, MediaInsightAccumulator> movieInsights,
         IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
-        ICollection<TimelineSource> timelineSources)
+        IDictionary<Guid, BaseItem?> entityCache)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -245,8 +315,6 @@ public sealed class LibraryStatisticsService
         }
 
         DateTime createdUtc = NormalizeUtc(item.DateCreated);
-        timelineSources.Add(new TimelineSource(createdUtc, Math.Max(0, size)));
-
         if (item is not Movie && item is not Episode)
         {
             return;
@@ -260,7 +328,7 @@ public sealed class LibraryStatisticsService
 
         var episode = (Episode)item;
         Guid seriesId = episode.SeriesId != Guid.Empty ? episode.SeriesId : episode.Id;
-        BaseItem? series = episode.SeriesId != Guid.Empty ? _libraryManager.GetItemById(episode.SeriesId) : null;
+        BaseItem? series = GetCachedItem(episode.SeriesId, entityCache);
         AddInsight(
             seriesInsights,
             seriesId,
@@ -299,28 +367,6 @@ public sealed class LibraryStatisticsService
         {
             insight.Path = path;
         }
-    }
-
-    private static List<GrowthPoint> BuildTimeline(IEnumerable<TimelineSource> sources)
-    {
-        long cumulativeSize = 0;
-        int cumulativeFiles = 0;
-        List<GrowthPoint> points = [];
-        foreach (var day in sources
-            .GroupBy(source => source.DateCreatedUtc.Date)
-            .OrderBy(group => group.Key))
-        {
-            cumulativeSize += day.Sum(source => source.SizeBytes);
-            cumulativeFiles += day.Count();
-            points.Add(new GrowthPoint
-            {
-                DateUtc = DateTime.SpecifyKind(day.Key, DateTimeKind.Utc),
-                CumulativeSizeBytes = cumulativeSize,
-                CumulativeFileCount = cumulativeFiles
-            });
-        }
-
-        return points;
     }
 
     private static List<MediaInsight> BuildInsights(IEnumerable<MediaInsightAccumulator> source, bool latest)
@@ -409,7 +455,8 @@ public sealed class LibraryStatisticsService
         BaseItem item,
         string libraryName,
         IReadOnlyCollection<MediaSourceInfo> sources,
-        IDictionary<string, DuplicateAccumulator> candidates)
+        IDictionary<string, DuplicateAccumulator> candidates,
+        IDictionary<Guid, BaseItem?> entityCache)
     {
         if (item is not Movie && item is not Episode)
         {
@@ -420,14 +467,18 @@ public sealed class LibraryStatisticsService
         string subtitle = string.Empty;
         string mediaType = "Movie";
         int? productionYear = item.ProductionYear;
+        int? duplicateSeasonNumber = null;
+        int? duplicateEpisodeNumber = null;
         string identity;
 
         if (item is Episode episode)
         {
             mediaType = "Series";
-            BaseItem? series = episode.SeriesId != Guid.Empty ? _libraryManager.GetItemById(episode.SeriesId) : null;
-            BaseItem? season = episode.SeasonId != Guid.Empty ? _libraryManager.GetItemById(episode.SeasonId) : null;
+            BaseItem? series = GetCachedItem(episode.SeriesId, entityCache);
+            BaseItem? season = GetCachedItem(episode.SeasonId, entityCache);
             int? seasonNumber = season?.IndexNumber ?? episode.ParentIndexNumber;
+            duplicateSeasonNumber = seasonNumber;
+            duplicateEpisodeNumber = episode.IndexNumber;
             title = series?.Name ?? episode.SeriesName ?? "Unknown series";
             productionYear = series?.ProductionYear;
             string number = seasonNumber.HasValue && episode.IndexNumber.HasValue
@@ -455,7 +506,17 @@ public sealed class LibraryStatisticsService
 
         if (!candidates.TryGetValue(identity, out DuplicateAccumulator? candidate))
         {
-            candidate = new DuplicateAccumulator(item.Id, mediaType, title, subtitle, productionYear);
+            candidate = new DuplicateAccumulator(
+                item.Id,
+                identity,
+                mediaType,
+                title,
+                subtitle,
+                productionYear,
+                duplicateSeasonNumber,
+                duplicateEpisodeNumber,
+                item is Episode ambiguousEpisode
+                    && DuplicateReviewClassifier.IsAmbiguousEpisode(ambiguousEpisode.Name, ambiguousEpisode.IndexNumberEnd));
             candidates[identity] = candidate;
         }
 
@@ -529,6 +590,7 @@ public sealed class LibraryStatisticsService
             .Where(candidate => candidate.Versions.Count > 1)
             .Select(candidate => new DuplicateGroup
             {
+                GroupKey = DuplicateReviewClassifier.Hash(candidate.Identity),
                 ItemId = candidate.ItemId,
                 MediaType = candidate.MediaType,
                 Title = candidate.Title,
@@ -536,6 +598,9 @@ public sealed class LibraryStatisticsService
                 ProductionYear = candidate.ProductionYear,
                 LibraryName = string.Join(", ", candidate.LibraryNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)),
                 IsMergedVersion = candidate.IsMergedVersion,
+                IsAmbiguous = candidate.IsAmbiguous,
+                SeasonNumber = candidate.SeasonNumber,
+                EpisodeNumber = candidate.EpisodeNumber,
                 Versions = candidate.Versions.Values
                     .OrderBy(version => version.Name, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(version => version.Path, StringComparer.OrdinalIgnoreCase)
@@ -555,6 +620,15 @@ public sealed class LibraryStatisticsService
             _logger.LogDebug(ex, "Library Statistics: media sources unavailable for {ItemId}.", item.Id);
             return [];
         }
+    }
+
+    private BaseItem? GetCachedItem(Guid itemId, IDictionary<Guid, BaseItem?> cache)
+    {
+        if (itemId == Guid.Empty) return null;
+        if (cache.TryGetValue(itemId, out BaseItem? item)) return item;
+        item = _libraryManager.GetItemById(itemId);
+        cache[itemId] = item;
+        return item;
     }
 
     private List<MediaStream> ReadStreams(Guid itemId)
@@ -624,12 +698,18 @@ public sealed class LibraryStatisticsService
 
     private sealed class DuplicateAccumulator(
         Guid itemId,
+        string identity,
         string mediaType,
         string title,
         string subtitle,
-        int? productionYear)
+        int? productionYear,
+        int? seasonNumber,
+        int? episodeNumber,
+        bool isAmbiguous)
     {
         internal Guid ItemId { get; } = itemId;
+
+        internal string Identity { get; } = identity;
 
         internal string MediaType { get; } = mediaType;
 
@@ -639,6 +719,12 @@ public sealed class LibraryStatisticsService
 
         internal int? ProductionYear { get; } = productionYear;
 
+        internal int? SeasonNumber { get; } = seasonNumber;
+
+        internal int? EpisodeNumber { get; } = episodeNumber;
+
+        internal bool IsAmbiguous { get; } = isAmbiguous;
+
         internal HashSet<string> LibraryNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         internal bool IsMergedVersion { get; set; }
@@ -646,5 +732,101 @@ public sealed class LibraryStatisticsService
         internal Dictionary<string, MediaVersionDetail> Versions { get; } = new(StringComparer.Ordinal);
     }
 
-    private readonly record struct TimelineSource(DateTime DateCreatedUtc, long SizeBytes);
+    private void ApplyStoredState(StatisticsResult result)
+    {
+        foreach (DuplicateGroup group in result.DuplicateGroups.Where(group => string.IsNullOrWhiteSpace(group.GroupKey)))
+        {
+            string legacyIdentity = string.Join(
+                ":",
+                group.MediaType,
+                group.Title,
+                group.ProductionYear?.ToString() ?? "unknown",
+                group.SeasonNumber?.ToString() ?? "unknown",
+                group.EpisodeNumber?.ToString() ?? "unknown",
+                group.Subtitle);
+            group.GroupKey = DuplicateReviewClassifier.Hash(legacyIdentity.ToLowerInvariant());
+        }
+
+        _database.ApplyReviews(result.DuplicateGroups, Plugin.Instance?.Configuration.AutoAllow4KAnd1080P ?? false);
+        result.GrowthTimeline = _database.LoadTimeline();
+    }
+
+    private static void RestoreAuxiliary(StatisticsSummary previous, StatisticsSummary current)
+    {
+        current.SubtitleSizeBytes = previous.SubtitleSizeBytes;
+        current.SubtitleFileCount = previous.SubtitleFileCount;
+        current.ImageSizeBytes = previous.ImageSizeBytes;
+        current.ImageFileCount = previous.ImageFileCount;
+        current.TrickplaySizeBytes = previous.TrickplaySizeBytes;
+        current.TrickplayFolderCount = previous.TrickplayFolderCount;
+        current.MetadataSizeBytes = previous.MetadataSizeBytes;
+        current.MetadataFileCount = previous.MetadataFileCount;
+        current.OtherFileSizeBytes = previous.OtherFileSizeBytes;
+        current.OtherFileCount = previous.OtherFileCount;
+        int auxiliaryFileCount = Math.Max(0, previous.TotalFileCount - previous.MediaFileCount);
+        current.TotalFileCount = current.MediaFileCount + auxiliaryFileCount;
+        current.TotalSizeBytes = current.MovieSizeBytes
+            + current.EpisodeSizeBytes
+            + current.OtherVideoSizeBytes
+            + current.AudioSizeBytes
+            + current.SubtitleSizeBytes
+            + current.ImageSizeBytes
+            + current.TrickplaySizeBytes
+            + current.MetadataSizeBytes
+            + current.OtherFileSizeBytes;
+    }
+
+    private static void AggregateAuxiliary(IEnumerable<LibraryScanStatistics> libraries, StatisticsSummary total)
+    {
+        List<LibraryScanStatistics> values = libraries.ToList();
+        total.SubtitleSizeBytes = values.Sum(item => item.SubtitleSizeBytes);
+        total.SubtitleFileCount = values.Sum(item => item.SubtitleFileCount);
+        total.ImageSizeBytes = values.Sum(item => item.ImageSizeBytes);
+        total.ImageFileCount = values.Sum(item => item.ImageFileCount);
+        total.TrickplaySizeBytes = values.Sum(item => item.TrickplaySizeBytes);
+        total.TrickplayFolderCount = values.Sum(item => item.TrickplayFolderCount);
+        total.MetadataSizeBytes = values.Sum(item => item.MetadataSizeBytes);
+        total.MetadataFileCount = values.Sum(item => item.MetadataFileCount);
+        total.OtherFileSizeBytes = values.Sum(item => item.OtherFileSizeBytes);
+        total.OtherFileCount = values.Sum(item => item.OtherFileCount);
+        total.TotalFileCount = total.MediaFileCount + values.Sum(item => Math.Max(0, item.TotalFileCount - item.MediaFileCount));
+        total.TotalSizeBytes = total.MovieSizeBytes
+            + total.EpisodeSizeBytes
+            + total.OtherVideoSizeBytes
+            + total.AudioSizeBytes
+            + total.SubtitleSizeBytes
+            + total.ImageSizeBytes
+            + total.TrickplaySizeBytes
+            + total.MetadataSizeBytes
+            + total.OtherFileSizeBytes;
+    }
+
+    private static int ScanPercent(int libraryIndex, int libraryCount, double libraryFraction)
+    {
+        if (libraryCount <= 0) return 90;
+        double completed = Math.Clamp((libraryIndex + libraryFraction) / libraryCount, 0, 1);
+        return 5 + (int)Math.Round(completed * 85);
+    }
+
+    private static void Report(
+        Action<ScanProgress>? report,
+        string status,
+        string phase,
+        string libraryName,
+        int percent,
+        int processed,
+        int total,
+        bool fullStorageScan)
+    {
+        report?.Invoke(new ScanProgress
+        {
+            Status = status,
+            Phase = phase,
+            LibraryName = libraryName,
+            Percent = Math.Clamp(percent, 0, 100),
+            ProcessedItems = processed,
+            TotalItems = total,
+            FullStorageScan = fullStorageScan
+        });
+    }
 }

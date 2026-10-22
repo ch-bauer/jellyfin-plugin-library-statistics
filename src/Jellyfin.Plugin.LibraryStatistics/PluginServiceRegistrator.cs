@@ -12,7 +12,9 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
         serviceCollection.AddSingleton<StatisticsStore>();
+        serviceCollection.AddSingleton<StatisticsDatabase>();
         serviceCollection.AddSingleton<LibraryStorageScanner>();
         serviceCollection.AddSingleton<LibraryStatisticsService>();
+        serviceCollection.AddSingleton<ScanCoordinator>();
     }
 }
