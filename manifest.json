@@ -13,7 +13,7 @@
         "changelog": "Adds one-click approval for every duplicate episode in a series and a confirmed global reset for all persisted manual duplicate reviews.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.6/library-statistics_1.3.0.6.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "e40302da8d64c36f5c65d07d723a99e2",
         "timestamp": "2026-10-23T00:00:00Z"
       },
       {
