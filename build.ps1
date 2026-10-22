@@ -7,7 +7,7 @@ $projectRoot = $PSScriptRoot
 $publishPath = Join-Path $projectRoot 'publish'
 $distPath = Join-Path $projectRoot 'dist'
 $packageContentPath = Join-Path $projectRoot 'package'
-$packagePath = Join-Path $distPath 'library-statistics_1.3.0.3.zip'
+$packagePath = Join-Path $distPath 'library-statistics_1.3.0.4.zip'
 
 dotnet test (Join-Path $projectRoot 'Jellyfin.Plugin.LibraryStatistics.slnx') -c $Configuration
 if (Test-Path -LiteralPath $publishPath) {

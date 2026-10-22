@@ -1,6 +1,6 @@
 {
   "category": "General",
-  "changelog": "Builds the library-growth graph from Jellyfin's indexed media dates so existing dated movies, episodes and audio produce a real cumulative timeline after one scan.",
+  "changelog": "Defaults library growth to the full timeline, simplifies audio-codec charts, and improves library badges and trend-path readability.",
   "description": "Scan selected Jellyfin libraries, inspect storage, formats and trends, browse the latest or largest titles, and compare duplicate versions with paths and MediaInfo.",
   "guid": "102f0695-0752-4348-95ac-01f2825db6cb",
   "name": "Library Statistics",
@@ -8,7 +8,7 @@
   "owner": "Christian",
   "targetAbi": "10.11.11.0",
   "timestamp": "2026-10-22T00:00:00.000Z",
-  "version": "1.3.0.3",
+  "version": "1.3.0.4",
   "status": "Active",
   "autoUpdate": false
 }
