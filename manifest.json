@@ -13,7 +13,7 @@
         "changelog": "Aligns the dashboard with Jellyfin Helper, fixes library checkboxes and table colors, removes per-library scrolling, and adds duplicate-tab 4K/1080p and synchronized MediaInfo toggles.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.2/library-statistics_1.3.0.2.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "4c2d00b877e702205ea6412fc6bc3f17",
         "timestamp": "2026-10-22T00:00:00Z"
       },
       {
