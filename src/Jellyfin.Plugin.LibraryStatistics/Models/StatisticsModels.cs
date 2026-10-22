@@ -273,6 +273,26 @@ public sealed class DuplicateReviewRequest
     public string Note { get; set; } = string.Empty;
 }
 
+/// <summary>A request to change several exact duplicate reviews together.</summary>
+public sealed class DuplicateReviewBatchRequest
+{
+    /// <summary>Gets or sets the duplicate group keys to update.</summary>
+    public List<string> GroupKeys { get; set; } = [];
+
+    /// <summary>Gets or sets a value indicating whether the duplicates are allowed.</summary>
+    public bool Allowed { get; set; }
+
+    /// <summary>Gets or sets an optional review note.</summary>
+    public string Note { get; set; } = string.Empty;
+}
+
+/// <summary>The result of clearing all persisted duplicate review decisions.</summary>
+public sealed class DuplicateReviewResetResult
+{
+    /// <summary>Gets or sets the number of removed review records.</summary>
+    public int RemovedCount { get; set; }
+}
+
 /// <summary>Current state of a background library scan.</summary>
 public sealed class ScanProgress
 {

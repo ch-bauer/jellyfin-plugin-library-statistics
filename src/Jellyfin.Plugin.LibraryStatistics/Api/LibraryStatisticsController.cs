@@ -78,4 +78,20 @@ public sealed class LibraryStatisticsController : ControllerBase
         DuplicateGroup? group = _statisticsService.SetDuplicateReview(groupKey, request);
         return group is null ? NotFound() : Ok(group);
     }
+
+    /// <summary>Marks several exact duplicate version sets as allowed or unreviewed.</summary>
+    [HttpPost("Duplicates/ReviewBatch")]
+    [ProducesResponseType(typeof(IReadOnlyList<DuplicateGroup>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<IReadOnlyList<DuplicateGroup>> ReviewDuplicates([FromBody] DuplicateReviewBatchRequest request)
+    {
+        IReadOnlyList<DuplicateGroup>? groups = _statisticsService.SetDuplicateReviews(request);
+        return groups is null ? NotFound() : Ok(groups);
+    }
+
+    /// <summary>Clears all persisted manual duplicate review decisions.</summary>
+    [HttpPost("Duplicates/Reviews/Reset")]
+    [ProducesResponseType(typeof(DuplicateReviewResetResult), StatusCodes.Status200OK)]
+    public ActionResult<DuplicateReviewResetResult> ResetDuplicateReviews() =>
+        Ok(_statisticsService.ResetDuplicateReviews());
 }

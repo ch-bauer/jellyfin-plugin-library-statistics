@@ -38,8 +38,9 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
   subtitles and trickplay.
 - Persistent duplicate review states. Any result can be marked allowed, and an optional
   rule automatically allows exactly one 4K plus one 1080p version.
-- Series-level expandable duplicate groups and a separate view for ambiguous multipart
-  episodes.
+- Series-level expandable duplicate groups with one-click approval for all duplicate
+  episodes in a series, plus a confirmed reset for all manual review decisions.
+- A separate view for ambiguous multipart episodes.
 
 ## Merged-version duplicates
 
@@ -111,7 +112,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.3.0.5.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.6.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

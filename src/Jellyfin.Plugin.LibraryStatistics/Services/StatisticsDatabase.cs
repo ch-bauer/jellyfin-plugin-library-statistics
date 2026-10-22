@@ -75,17 +75,46 @@ public sealed class StatisticsDatabase
     /// <summary>Stores an explicit administrator review for one exact version set.</summary>
     public void SaveReview(string groupKey, string versionSignature, bool allowed, string? note)
     {
+        SaveReviews([(groupKey, versionSignature)], allowed, note);
+    }
+
+    /// <summary>Stores administrator reviews for several exact version sets in one transaction.</summary>
+    internal void SaveReviews(
+        IEnumerable<(string GroupKey, string VersionSignature)> reviews,
+        bool allowed,
+        string? note)
+    {
         lock (_sync)
         {
             DatabaseState state = LoadState();
-            state.Reviews[groupKey] = new ReviewRecord
+            string cleanNote = (note ?? string.Empty).Trim();
+            DateTime updatedAtUtc = DateTime.UtcNow;
+            foreach ((string groupKey, string versionSignature) in reviews)
             {
-                VersionSignature = versionSignature,
-                Allowed = allowed,
-                Note = (note ?? string.Empty).Trim(),
-                UpdatedAtUtc = DateTime.UtcNow
-            };
+                state.Reviews[groupKey] = new ReviewRecord
+                {
+                    VersionSignature = versionSignature,
+                    Allowed = allowed,
+                    Note = cleanNote,
+                    UpdatedAtUtc = updatedAtUtc
+                };
+            }
+
             SaveState(state);
+        }
+    }
+
+    /// <summary>Clears all persisted manual duplicate review decisions.</summary>
+    public int ClearReviews()
+    {
+        lock (_sync)
+        {
+            DatabaseState state = LoadState();
+            int removed = state.Reviews.Count;
+            if (removed == 0) return 0;
+            state.Reviews.Clear();
+            SaveState(state);
+            return removed;
         }
     }
 

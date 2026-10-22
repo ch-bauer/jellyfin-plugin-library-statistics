@@ -110,6 +110,45 @@ public sealed class LibraryStatisticsService
         return result.DuplicateGroups.First(item => item.GroupKey.Equals(groupKey, StringComparison.Ordinal));
     }
 
+    /// <summary>Changes the explicit review state for several exact duplicate groups.</summary>
+    public IReadOnlyList<DuplicateGroup>? SetDuplicateReviews(DuplicateReviewBatchRequest request)
+    {
+        StatisticsResult? result = _store.Load();
+        if (result is null) return null;
+
+        HashSet<string> keys = new(
+            request.GroupKeys.Where(key => !string.IsNullOrWhiteSpace(key)),
+            StringComparer.Ordinal);
+        List<DuplicateGroup> groups = result.DuplicateGroups
+            .Where(group => keys.Contains(group.GroupKey))
+            .ToList();
+        if (keys.Count == 0 || groups.Count != keys.Count) return null;
+
+        _database.SaveReviews(
+            groups.Select(group => (
+                group.GroupKey,
+                DuplicateReviewClassifier.VersionSignature(group.Versions))),
+            request.Allowed,
+            request.Note);
+        ApplyStoredState(result);
+        _store.Save(result);
+        return groups;
+    }
+
+    /// <summary>Clears every persisted manual duplicate review decision.</summary>
+    public DuplicateReviewResetResult ResetDuplicateReviews()
+    {
+        int removed = _database.ClearReviews();
+        StatisticsResult? result = _store.Load();
+        if (result is not null)
+        {
+            ApplyStoredState(result);
+            _store.Save(result);
+        }
+
+        return new DuplicateReviewResetResult { RemovedCount = removed };
+    }
+
     private StatisticsResult Scan(
         bool fullStorageScan,
         Action<ScanProgress>? reportProgress,

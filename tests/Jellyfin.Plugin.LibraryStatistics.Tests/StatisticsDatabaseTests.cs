@@ -64,6 +64,40 @@ public sealed class StatisticsDatabaseTests
         }
     }
 
+    [Fact]
+    public void Database_SavesBatchReviewsAndClearsAllManualDecisions()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "library-statistics-db-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var database = new StatisticsDatabase(directory, NullLogger<StatisticsDatabase>.Instance);
+            DuplicateGroup first = Group("/media/s01e01-a.mkv", "/media/s01e01-b.mkv");
+            DuplicateGroup second = Group("/media/s01e02-a.mkv", "/media/s01e02-b.mkv");
+            first.GroupKey = "episode-one";
+            second.GroupKey = "episode-two";
+
+            database.SaveReviews(
+                [
+                    (first.GroupKey, DuplicateReviewClassifier.VersionSignature(first.Versions)),
+                    (second.GroupKey, DuplicateReviewClassifier.VersionSignature(second.Versions))
+                ],
+                true,
+                "whole series");
+            database.ApplyReviews([first, second], false);
+            Assert.All([first, second], group => Assert.Equal(DuplicateReviewStates.Allowed, group.ReviewState));
+
+            Assert.Equal(2, database.ClearReviews());
+            database.ApplyReviews([first, second], false);
+            Assert.All([first, second], group => Assert.Equal(DuplicateReviewStates.Unreviewed, group.ReviewState));
+            Assert.Equal(0, database.ClearReviews());
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
     private static StatisticsResult Result(long size) => new()
     {
         ScannedAtUtc = new DateTime(2026, 10, 22, 10, 0, 0, DateTimeKind.Utc),
