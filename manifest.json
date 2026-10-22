@@ -13,7 +13,7 @@
         "changelog": "Builds the library-growth graph from Jellyfin's indexed media dates so existing dated movies, episodes and audio produce a real cumulative timeline after one scan.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.3/library-statistics_1.3.0.3.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "a8e97ba102183c18269ffb0049ebe33b",
         "timestamp": "2026-10-22T00:00:00Z"
       },
       {
