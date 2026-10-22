@@ -13,7 +13,7 @@
         "changelog": "Defaults library growth to the full timeline, simplifies audio-codec charts, and improves library badges and trend-path readability.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.4/library-statistics_1.3.0.4.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "13f5d675205e0b6fb8051e35a91cade7",
         "timestamp": "2026-10-22T00:00:00Z"
       },
       {
