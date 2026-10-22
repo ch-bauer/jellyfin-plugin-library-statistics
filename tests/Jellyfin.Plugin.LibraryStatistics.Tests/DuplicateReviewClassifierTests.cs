@@ -39,6 +39,19 @@ public sealed class DuplicateReviewClassifierTests
             DuplicateReviewClassifier.VersionSignature([first, second]));
     }
 
+    [Fact]
+    public void EpisodeRuntimeComparison_RejectsFeaturettesAndAllowsNormalVersionDrift()
+    {
+        var normal = new MediaVersionDetail { RunTimeTicks = TimeSpan.FromMinutes(46).Ticks };
+        var alternate = new MediaVersionDetail { RunTimeTicks = TimeSpan.FromMinutes(45).Ticks };
+        var featurette = new MediaVersionDetail { RunTimeTicks = TimeSpan.FromMinutes(9).Ticks };
+
+        Assert.True(DuplicateReviewClassifier.HaveComparableEpisodeRuntimes([normal, alternate]));
+        Assert.False(DuplicateReviewClassifier.HaveComparableEpisodeRuntimes([normal, featurette]));
+        Assert.False(DuplicateReviewClassifier.HaveComparableEpisodeRuntimes(
+            [normal, new MediaVersionDetail()]));
+    }
+
     private static MediaVersionDetail Version(int width, int height, string path) => new()
     {
         Path = path,

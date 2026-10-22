@@ -26,14 +26,26 @@ public sealed class DuplicateIdentityTests
     }
 
     [Fact]
-    public void EpisodeKey_UsesSeriesAndEpisodeCoordinatesWithoutProviderIds()
+    public void EpisodeKey_UsesSeriesEpisodeCoordinatesAndProviderIdentity()
     {
+        var provider = new Dictionary<string, string> { ["Tvdb"] = "12345" };
         Assert.Equal(
-            DuplicateIdentity.EpisodeKey("Dark", 1, 1, "Secrets", null, null),
-            DuplicateIdentity.EpisodeKey("DARK", 1, 1, "Secrets", null, null));
+            DuplicateIdentity.EpisodeKey("Dark", 1, 1, "Secrets", provider, null),
+            DuplicateIdentity.EpisodeKey("DARK", 1, 1, "Secrets", provider, null));
         Assert.NotEqual(
-            DuplicateIdentity.EpisodeKey("Dark", 1, 1, "Secrets", null, null),
-            DuplicateIdentity.EpisodeKey("Dark", 1, 2, "Lies", null, null));
+            DuplicateIdentity.EpisodeKey("Dark", 1, 1, "Secrets", provider, null),
+            DuplicateIdentity.EpisodeKey("Dark", 1, 2, "Lies", provider, null));
+        Assert.NotEqual(
+            DuplicateIdentity.EpisodeKey("Dark", 1, 1, "Secrets", provider, null),
+            DuplicateIdentity.EpisodeKey("Dark", 1, 1, "Secrets", new Dictionary<string, string> { ["Tvdb"] = "67890" }, null));
+    }
+
+    [Fact]
+    public void ProviderIdentity_RequiresARecognizedNonEmptyProvider()
+    {
+        Assert.True(DuplicateIdentity.HasProviderIdentity(new Dictionary<string, string> { ["Tvdb"] = "12345" }));
+        Assert.False(DuplicateIdentity.HasProviderIdentity(new Dictionary<string, string> { ["Tvdb"] = "" }));
+        Assert.False(DuplicateIdentity.HasProviderIdentity(null));
     }
 
     [Fact]

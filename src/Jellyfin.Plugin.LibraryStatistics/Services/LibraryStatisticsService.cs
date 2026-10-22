@@ -526,10 +526,19 @@ public sealed class LibraryStatisticsService
                 episode.Name,
                 episode.ProviderIds,
                 series?.ProviderIds);
-            if (!seasonNumber.HasValue || !episode.IndexNumber.HasValue)
+            bool hasMultipleJellyfinSources = sources
+                .Where(source => !string.IsNullOrWhiteSpace(source.Path))
+                .Select(source => MediaSourceIdentity.PathKey(source.Path))
+                .Distinct(StringComparer.Ordinal)
+                .Skip(1)
+                .Any();
+            if (!seasonNumber.HasValue
+                || !episode.IndexNumber.HasValue
+                || !DuplicateIdentity.HasProviderIdentity(episode.ProviderIds)
+                || hasMultipleJellyfinSources)
             {
-                // Incomplete coordinates are not reliable enough for cross-item matching.
-                // Jellyfin-merged media sources still remain grouped within this item.
+                // Cross-item episode matching requires complete coordinates and a real
+                // episode provider id. Jellyfin-merged sources remain grouped per item.
                 identity += ":jellyfin-item:" + item.Id.ToString("N");
             }
         }
@@ -621,7 +630,10 @@ public sealed class LibraryStatisticsService
     private static List<DuplicateGroup> BuildDuplicateGroups(IEnumerable<DuplicateAccumulator> candidates)
     {
         return candidates
-            .Where(candidate => candidate.Versions.Count > 1)
+            .Where(candidate => candidate.Versions.Count > 1
+                && (candidate.MediaType != "Series"
+                    || candidate.IsMergedVersion
+                    || DuplicateReviewClassifier.HaveComparableEpisodeRuntimes(candidate.Versions.Values)))
             .Select(candidate => new DuplicateGroup
             {
                 GroupKey = DuplicateReviewClassifier.Hash(candidate.Identity),

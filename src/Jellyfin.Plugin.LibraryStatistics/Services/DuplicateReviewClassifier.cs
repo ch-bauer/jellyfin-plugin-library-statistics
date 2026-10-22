@@ -34,6 +34,19 @@ internal static class DuplicateReviewClassifier
                 && value.Contains("Part 2", StringComparison.OrdinalIgnoreCase);
     }
 
+    internal static bool HaveComparableEpisodeRuntimes(IReadOnlyCollection<MediaVersionDetail> versions)
+    {
+        if (versions.Count < 2 || versions.Any(version => version.RunTimeTicks.GetValueOrDefault() <= 0))
+        {
+            return false;
+        }
+
+        long minimum = versions.Min(version => version.RunTimeTicks!.Value);
+        long maximum = versions.Max(version => version.RunTimeTicks!.Value);
+        long tolerance = Math.Max(TimeSpan.FromMinutes(2).Ticks, (long)(maximum * 0.10));
+        return maximum - minimum <= tolerance;
+    }
+
     private static string ResolutionTier(MediaVersionDetail version)
     {
         MediaStreamDetail? video = version.Streams.FirstOrDefault(stream =>
