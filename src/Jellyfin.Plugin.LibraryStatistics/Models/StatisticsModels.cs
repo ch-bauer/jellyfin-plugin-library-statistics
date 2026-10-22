@@ -373,6 +373,9 @@ public sealed class StatisticsResult
     /// <summary>Gets or sets cumulative growth points reconstructed from indexed media dates.</summary>
     public List<GrowthPoint> GrowthTimeline { get; set; } = [];
 
+    /// <summary>Gets or sets whether the timeline comes from media dates or scan snapshots.</summary>
+    public string GrowthTimelineSource { get; set; } = string.Empty;
+
     /// <summary>Gets or sets movies ordered by measured size.</summary>
     public List<MediaInsight> LargestMovies { get; set; } = [];
 

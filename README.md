@@ -27,7 +27,7 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
   video codecs, video and music audio codecs, bitrate tiers, dynamic range, and audio and
   subtitle languages.
 - Expandable format rows that reveal the exact matching file paths.
-- A real storage and media-file timeline built from successful daily scan snapshots.
+- A cumulative storage and media-file timeline built from Jellyfin's indexed media dates.
 - Scrollable Largest and Latest views for movies and aggregate series storage.
 - Movies and series episodes that Jellyfin has grouped as multiple merged versions.
 - The exact indexed path, container, size, runtime and video/audio/subtitle MediaInfo for
@@ -111,7 +111,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.3.0.2.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.3.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

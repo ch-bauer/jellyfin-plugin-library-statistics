@@ -122,6 +122,7 @@ public sealed class LibraryStatisticsService
         Dictionary<string, DuplicateAccumulator> duplicateCandidates = new(StringComparer.Ordinal);
         Dictionary<Guid, MediaInsightAccumulator> movieInsights = [];
         Dictionary<Guid, MediaInsightAccumulator> seriesInsights = [];
+        List<MediaGrowthEntry> growthEntries = [];
         Dictionary<Guid, BaseItem?> entityCache = [];
         HashSet<string> excluded = new(
             Plugin.Instance?.Configuration.ExcludedLibraryIds ?? [],
@@ -176,6 +177,7 @@ public sealed class LibraryStatisticsService
                     duplicateCandidates,
                     movieInsights,
                     seriesInsights,
+                    growthEntries,
                     entityCache);
                 processedItems++;
                 if (itemIndex % 25 == 0 || itemIndex == items.Count - 1)
@@ -216,12 +218,18 @@ public sealed class LibraryStatisticsService
         result.LatestMovies = BuildInsights(movieInsights.Values, latest: true);
         result.LargestSeries = BuildInsights(seriesInsights.Values, latest: false);
         result.LatestSeries = BuildInsights(seriesInsights.Values, latest: true);
+        result.GrowthTimeline = BuildGrowthTimeline(growthEntries);
+        result.GrowthTimelineSource = "MediaDates";
         stopwatch.Stop();
         result.DurationMilliseconds = stopwatch.ElapsedMilliseconds;
         result.ScannedAtUtc = DateTime.UtcNow;
         _database.ApplyReviews(result.DuplicateGroups, Plugin.Instance?.Configuration.AutoAllow4KAnd1080P ?? false);
         _database.SaveSnapshot(result);
-        result.GrowthTimeline = _database.LoadTimeline();
+        if (result.GrowthTimeline.Count == 0)
+        {
+            result.GrowthTimeline = _database.LoadTimeline();
+            result.GrowthTimelineSource = "ScanSnapshots";
+        }
         _store.Save(result);
         Report(reportProgress, "Completed", "Scan complete", string.Empty, 100, processedItems, discoveredItems, fullStorageScan);
 
@@ -242,6 +250,7 @@ public sealed class LibraryStatisticsService
         IDictionary<string, DuplicateAccumulator> duplicateCandidates,
         IDictionary<Guid, MediaInsightAccumulator> movieInsights,
         IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
+        ICollection<MediaGrowthEntry> growthEntries,
         IDictionary<Guid, BaseItem?> entityCache)
     {
         MediaKind kind = item switch
@@ -265,7 +274,7 @@ public sealed class LibraryStatisticsService
             if (analyzedPaths.Add(MediaSourceIdentity.PathKey(item.Path)))
             {
                 long size = AnalyzeFallback(item, kind, accumulator);
-                TrackMedia(item, libraryName, item.Path, size, movieInsights, seriesInsights, entityCache);
+                TrackMedia(item, libraryName, item.Path, size, movieInsights, seriesInsights, growthEntries, entityCache);
             }
 
             return;
@@ -283,7 +292,7 @@ public sealed class LibraryStatisticsService
                 : MeasureFile(source.Path);
             IReadOnlyList<MediaStream> streams = source.MediaStreams ?? [];
             AnalyzeSource(source.Path, source.Container, size, source.RunTimeTicks ?? item.RunTimeTicks, streams, kind, accumulator);
-            TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, entityCache);
+            TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, growthEntries, entityCache);
         }
 
     }
@@ -307,6 +316,7 @@ public sealed class LibraryStatisticsService
         long size,
         IDictionary<Guid, MediaInsightAccumulator> movieInsights,
         IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
+        ICollection<MediaGrowthEntry> growthEntries,
         IDictionary<Guid, BaseItem?> entityCache)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -315,6 +325,7 @@ public sealed class LibraryStatisticsService
         }
 
         DateTime createdUtc = NormalizeUtc(item.DateCreated);
+        growthEntries.Add(new MediaGrowthEntry(createdUtc, Math.Max(0, size)));
         if (item is not Movie && item is not Episode)
         {
             return;
@@ -386,6 +397,29 @@ public sealed class LibraryStatisticsService
             Path = item.Path,
             FileCount = item.FileCount
         }).ToList();
+    }
+
+    internal static List<GrowthPoint> BuildGrowthTimeline(IEnumerable<MediaGrowthEntry> entries)
+    {
+        long cumulativeSize = 0;
+        int cumulativeFiles = 0;
+        List<GrowthPoint> timeline = [];
+
+        foreach (IGrouping<DateTime, MediaGrowthEntry> day in entries
+            .GroupBy(entry => entry.DateUtc.Date)
+            .OrderBy(group => group.Key))
+        {
+            cumulativeSize += day.Sum(entry => entry.SizeBytes);
+            cumulativeFiles += day.Count();
+            timeline.Add(new GrowthPoint
+            {
+                DateUtc = DateTime.SpecifyKind(day.Key, DateTimeKind.Utc),
+                CumulativeSizeBytes = cumulativeSize,
+                CumulativeFileCount = cumulativeFiles
+            });
+        }
+
+        return timeline;
     }
 
     private static DateTime NormalizeUtc(DateTime value)
@@ -696,6 +730,8 @@ public sealed class LibraryStatisticsService
         internal int FileCount { get; set; }
     }
 
+    internal sealed record MediaGrowthEntry(DateTime DateUtc, long SizeBytes);
+
     private sealed class DuplicateAccumulator(
         Guid itemId,
         string identity,
@@ -748,7 +784,12 @@ public sealed class LibraryStatisticsService
         }
 
         _database.ApplyReviews(result.DuplicateGroups, Plugin.Instance?.Configuration.AutoAllow4KAnd1080P ?? false);
-        result.GrowthTimeline = _database.LoadTimeline();
+        if (!string.Equals(result.GrowthTimelineSource, "MediaDates", StringComparison.Ordinal)
+            || result.GrowthTimeline.Count == 0)
+        {
+            result.GrowthTimeline = _database.LoadTimeline();
+            result.GrowthTimelineSource = "ScanSnapshots";
+        }
     }
 
     private static void RestoreAuxiliary(StatisticsSummary previous, StatisticsSummary current)
