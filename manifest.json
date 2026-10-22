@@ -13,7 +13,7 @@
         "changelog": "Fixes plugin startup on Jellyfin by removing native runtime assemblies from the package while retaining durable duplicate reviews and scan history.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.1/library-statistics_1.3.0.1.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "43e8783ff816c24aac0bf9cdd2efc331",
         "timestamp": "2026-10-22T00:00:00Z"
       },
       {
