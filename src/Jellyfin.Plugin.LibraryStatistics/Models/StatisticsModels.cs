@@ -207,6 +207,9 @@ public sealed class DuplicateGroup
     /// <summary>Gets or sets the stable metadata-derived group key.</summary>
     public string GroupKey { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the stable Jellyfin metadata-derived series grouping key.</summary>
+    public string SeriesGroupKey { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the Jellyfin item id.</summary>
     public Guid ItemId { get; set; }
 

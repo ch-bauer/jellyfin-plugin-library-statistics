@@ -49,6 +49,16 @@ public sealed class DuplicateIdentityTests
     }
 
     [Fact]
+    public void SeriesKey_UnifiesAlternateSeriesDisplayNamesWithTheSameProviderIdentity()
+    {
+        var provider = new Dictionary<string, string> { ["Tvdb"] = "273181" };
+
+        Assert.Equal(
+            DuplicateIdentity.SeriesKey("Better Call Saul", provider),
+            DuplicateIdentity.SeriesKey("Better Call Saul (4K)", provider));
+    }
+
+    [Fact]
     public void EpisodeKey_DoesNotCollapseDifferentEpisodesWithSharedProviderId()
     {
         var sharedEpisodeIds = new Dictionary<string, string> { ["Imdb"] = "tt0206512" };

@@ -542,6 +542,7 @@ public sealed class LibraryStatisticsService
         int? productionYear = item.ProductionYear;
         int? duplicateSeasonNumber = null;
         int? duplicateEpisodeNumber = null;
+        string seriesGroupKey = string.Empty;
         string identity;
 
         if (item is Episode episode)
@@ -553,6 +554,7 @@ public sealed class LibraryStatisticsService
             duplicateSeasonNumber = seasonNumber;
             duplicateEpisodeNumber = episode.IndexNumber;
             title = series?.Name ?? episode.SeriesName ?? "Unknown series";
+            seriesGroupKey = DuplicateIdentity.SeriesKey(title, series?.ProviderIds);
             productionYear = series?.ProductionYear;
             string number = seasonNumber.HasValue && episode.IndexNumber.HasValue
                 ? $"S{seasonNumber:00}E{episode.IndexNumber:00}"
@@ -597,6 +599,7 @@ public sealed class LibraryStatisticsService
                 productionYear,
                 duplicateSeasonNumber,
                 duplicateEpisodeNumber,
+                seriesGroupKey,
                 item is Episode ambiguousEpisode
                     && DuplicateReviewClassifier.IsAmbiguousEpisode(ambiguousEpisode.Name, ambiguousEpisode.IndexNumberEnd));
             candidates[identity] = candidate;
@@ -676,6 +679,7 @@ public sealed class LibraryStatisticsService
             .Select(candidate => new DuplicateGroup
             {
                 GroupKey = DuplicateReviewClassifier.Hash(candidate.Identity),
+                SeriesGroupKey = candidate.SeriesGroupKey,
                 ItemId = candidate.ItemId,
                 MediaType = candidate.MediaType,
                 Title = candidate.Title,
@@ -792,6 +796,7 @@ public sealed class LibraryStatisticsService
         int? productionYear,
         int? seasonNumber,
         int? episodeNumber,
+        string seriesGroupKey,
         bool isAmbiguous)
     {
         internal Guid ItemId { get; } = itemId;
@@ -809,6 +814,8 @@ public sealed class LibraryStatisticsService
         internal int? SeasonNumber { get; } = seasonNumber;
 
         internal int? EpisodeNumber { get; } = episodeNumber;
+
+        internal string SeriesGroupKey { get; } = seriesGroupKey;
 
         internal bool IsAmbiguous { get; } = isAmbiguous;
 
