@@ -13,7 +13,7 @@
         "changelog": "Unifies duplicate episodes from alternate Jellyfin series entries such as base and 4K libraries under one provider-backed series group and one series-wide allow action.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.7/library-statistics_1.3.0.7.zip",
-        "checksum": "",
+        "checksum": "68c47fbc64d7e66be6c18cd299675240",
         "timestamp": "2026-10-23T00:00:00Z"
       },
       {
