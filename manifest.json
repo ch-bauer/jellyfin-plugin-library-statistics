@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/ch-bauer/jellyfin-plugin-library-statistics/main/images/icon.png",
     "versions": [
       {
+        "version": "1.3.0.9",
+        "changelog": "Fixes the total-runtime card width and corrects the years, months, weeks and days conversion.",
+        "targetAbi": "10.11.11.0",
+        "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.9/library-statistics_1.3.0.9.zip",
+        "checksum": "c7d86bb4b9c05120840996b8264eeadb",
+        "timestamp": "2026-11-05T00:00:00Z"
+      },
+      {
         "version": "1.3.0.8",
         "changelog": "Adds a duplicate-aware total runtime summary to the overview, formatted as years, months, weeks and days.",
         "targetAbi": "10.11.11.0",
