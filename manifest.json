@@ -13,7 +13,7 @@
         "changelog": "Excludes music and other audio tracks from the duplicate-aware total runtime.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.10/library-statistics_1.3.0.10.zip",
-        "checksum": "f507e9f7e47561fd8ef27f828ee8a249",
+        "checksum": "ecd7f5847a591ee22bcfd06e4ce0806a",
         "timestamp": "2026-11-05T00:00:00Z"
       },
       {
