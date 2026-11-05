@@ -7,9 +7,9 @@ internal sealed class UniqueRuntimeAccumulator
 
     internal long TotalTicks => _runtimes.Values.Sum();
 
-    internal void Add(string identity, IEnumerable<long?> runtimeCandidates)
+    internal void Add(MediaKind kind, string identity, IEnumerable<long?> runtimeCandidates)
     {
-        if (string.IsNullOrWhiteSpace(identity))
+        if (kind == MediaKind.Audio || string.IsNullOrWhiteSpace(identity))
         {
             return;
         }

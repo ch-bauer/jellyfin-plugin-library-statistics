@@ -313,6 +313,7 @@ public sealed class LibraryStatisticsService
         string? duplicateIdentity = TrackDuplicateCandidate(item, libraryName, sources, duplicateCandidates, entityCache);
         string runtimeIdentity = duplicateIdentity ?? "jellyfin-item:" + item.Id.ToString("N");
         uniqueRuntimes.Add(
+            kind,
             runtimeIdentity,
             sources.Select(source => source.RunTimeTicks ?? item.RunTimeTicks).Append(item.RunTimeTicks));
 
