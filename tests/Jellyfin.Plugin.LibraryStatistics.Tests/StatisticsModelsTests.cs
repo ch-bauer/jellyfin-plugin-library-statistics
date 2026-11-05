@@ -64,6 +64,10 @@ public sealed class StatisticsModelsTests
     {
         var expected = new StatisticsResult
         {
+            Total = new StatisticsSummary
+            {
+                TotalRunTimeTicks = TimeSpan.FromDays(365).Ticks
+            },
             GrowthTimeline =
             [
                 new GrowthPoint
@@ -94,6 +98,7 @@ public sealed class StatisticsModelsTests
 
         var point = Assert.Single(actual!.GrowthTimeline);
         var series = Assert.Single(actual.LargestSeries);
+        Assert.Equal(TimeSpan.FromDays(365).Ticks, actual.Total.TotalRunTimeTicks);
         Assert.Equal(4_096, point.CumulativeSizeBytes);
         Assert.Equal(3, point.CumulativeFileCount);
         Assert.Equal("Example series", series.Title);

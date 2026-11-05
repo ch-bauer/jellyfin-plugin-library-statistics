@@ -41,6 +41,9 @@ public class StatisticsSummary
     /// <summary>Gets or sets the total measured file size.</summary>
     public long TotalSizeBytes { get; set; }
 
+    /// <summary>Gets or sets the combined runtime of unique media, excluding duplicate versions.</summary>
+    public long TotalRunTimeTicks { get; set; }
+
     /// <summary>Gets or sets the movie count.</summary>
     public int MovieCount { get; set; }
 

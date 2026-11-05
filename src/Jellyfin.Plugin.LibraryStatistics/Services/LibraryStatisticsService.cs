@@ -163,6 +163,7 @@ public sealed class LibraryStatisticsService
         Dictionary<Guid, MediaInsightAccumulator> seriesInsights = [];
         List<MediaGrowthEntry> growthEntries = [];
         Dictionary<Guid, BaseItem?> entityCache = [];
+        UniqueRuntimeAccumulator uniqueRuntimes = new();
         HashSet<string> excluded = new(
             Plugin.Instance?.Configuration.ExcludedLibraryIds ?? [],
             StringComparer.OrdinalIgnoreCase);
@@ -217,7 +218,8 @@ public sealed class LibraryStatisticsService
                     movieInsights,
                     seriesInsights,
                     growthEntries,
-                    entityCache);
+                    entityCache,
+                    uniqueRuntimes);
                 processedItems++;
                 if (itemIndex % 25 == 0 || itemIndex == items.Count - 1)
                 {
@@ -252,6 +254,7 @@ public sealed class LibraryStatisticsService
             .ThenBy(group => group.Subtitle, StringComparer.OrdinalIgnoreCase)
             .ToList();
         total.ApplyTo(result.Total);
+        result.Total.TotalRunTimeTicks = uniqueRuntimes.TotalTicks;
         if (!fullStorageScan && previousResult is not null) AggregateAuxiliary(result.Libraries, result.Total);
         result.LargestMovies = BuildInsights(movieInsights.Values, latest: false);
         result.LatestMovies = BuildInsights(movieInsights.Values, latest: true);
@@ -290,7 +293,8 @@ public sealed class LibraryStatisticsService
         IDictionary<Guid, MediaInsightAccumulator> movieInsights,
         IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
         ICollection<MediaGrowthEntry> growthEntries,
-        IDictionary<Guid, BaseItem?> entityCache)
+        IDictionary<Guid, BaseItem?> entityCache,
+        UniqueRuntimeAccumulator uniqueRuntimes)
     {
         MediaKind kind = item switch
         {
@@ -306,7 +310,11 @@ public sealed class LibraryStatisticsService
             .Select(group => group.First())
             .ToList();
 
-        TrackDuplicateCandidate(item, libraryName, sources, duplicateCandidates, entityCache);
+        string? duplicateIdentity = TrackDuplicateCandidate(item, libraryName, sources, duplicateCandidates, entityCache);
+        string runtimeIdentity = duplicateIdentity ?? "jellyfin-item:" + item.Id.ToString("N");
+        uniqueRuntimes.Add(
+            runtimeIdentity,
+            sources.Select(source => source.RunTimeTicks ?? item.RunTimeTicks).Append(item.RunTimeTicks));
 
         if (sources.Count == 0)
         {
@@ -524,7 +532,7 @@ public sealed class LibraryStatisticsService
         }
     }
 
-    private void TrackDuplicateCandidate(
+    private string? TrackDuplicateCandidate(
         BaseItem item,
         string libraryName,
         IReadOnlyCollection<MediaSourceInfo> sources,
@@ -533,7 +541,7 @@ public sealed class LibraryStatisticsService
     {
         if (item is not Movie && item is not Episode)
         {
-            return;
+            return null;
         }
 
         string title = item.Name ?? "Untitled";
@@ -628,12 +636,12 @@ public sealed class LibraryStatisticsService
                 }
             }
 
-            return;
+            return identity;
         }
 
         if (string.IsNullOrWhiteSpace(item.Path))
         {
-            return;
+            return identity;
         }
 
         candidate.Versions.TryAdd(
@@ -650,6 +658,8 @@ public sealed class LibraryStatisticsService
                     .Select(ToStreamDetail)
                     .ToList()
             });
+
+        return identity;
     }
 
     private MediaVersionDetail ToVersionDetail(BaseItem item, MediaSourceInfo source) => new()
