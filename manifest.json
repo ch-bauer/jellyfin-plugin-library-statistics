@@ -13,7 +13,7 @@
         "changelog": "Fixes the total-runtime card width and corrects the years, months, weeks and days conversion.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.9/library-statistics_1.3.0.9.zip",
-        "checksum": "c7d86bb4b9c05120840996b8264eeadb",
+        "checksum": "60b37723ac8357fd4d2bcaef9e4220bc",
         "timestamp": "2026-11-05T00:00:00Z"
       },
       {
