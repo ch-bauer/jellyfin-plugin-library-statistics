@@ -1,14 +1,14 @@
 {
   "category": "General",
-  "changelog": "Excludes music and other audio tracks from the duplicate-aware total runtime.",
+  "changelog": "Adds a Folder audit tab for allowed duplicate movie versions stored in the same parent folder.",
   "description": "Scan selected Jellyfin libraries, inspect storage, formats and trends, browse the latest or largest titles, and compare duplicate versions with paths and MediaInfo.",
   "guid": "102f0695-0752-4348-95ac-01f2825db6cb",
   "name": "Library Statistics",
   "overview": "Library storage statistics, per-library formats, trends, media insights and duplicate analysis.",
   "owner": "Christian",
   "targetAbi": "10.11.11.0",
-  "timestamp": "2026-11-05T00:00:00.000Z",
-  "version": "1.3.0.10",
+  "timestamp": "2026-11-12T00:00:00.000Z",
+  "version": "1.3.0.11",
   "status": "Active",
   "autoUpdate": false
 }

@@ -40,6 +40,7 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
   rule automatically allows exactly one 4K plus one 1080p version.
 - Series-level expandable duplicate groups with one-click approval for all duplicate
   episodes in a series, plus a confirmed reset for all manual review decisions.
+- A folder audit for allowed movie versions that still share the same parent folder.
 - A separate view for ambiguous multipart episodes.
 
 ## Merged-version duplicates
@@ -80,6 +81,8 @@ Open **Dashboard → Plugins → Library Statistics**.
 - Use **Duplicates** to compare merged and separately indexed duplicate versions, toggle
   the exact 4K + 1080p allowance, and show or hide synchronized MediaInfo panels. Alternate
   Jellyfin series entries with the same provider identity are combined into one series block.
+- Use **Folder audit** to find allowed movie versions that should be moved into separate
+  folders.
 - Use **Media formats** to switch the donut charts between the whole server and one
   library.
 
