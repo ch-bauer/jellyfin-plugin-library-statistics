@@ -13,7 +13,7 @@
         "changelog": "Adds grouped language audits and a separate resolution-availability audit with exact filters and persistent approvals.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.12/library-statistics_1.3.0.12.zip",
-        "checksum": "9c689646bb7855f74445d2df26835566",
+        "checksum": "ace445ea1155669d86063a1786ca0138",
         "timestamp": "2026-11-19T00:00:00Z"
       },
       {
