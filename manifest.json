@@ -13,7 +13,7 @@
         "changelog": "Keeps audit groups open after review, adds folder-root and selected-item batch actions, and makes every group approval reversible.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.17/library-statistics_1.3.0.17.zip",
-        "checksum": "35495a475525f1726ac80db5edc6283a",
+        "checksum": "64f18e1b45d6a3b695fa9adf0b200032",
         "timestamp": "2026-11-20T00:00:00Z"
       },
       {
