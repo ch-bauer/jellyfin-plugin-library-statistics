@@ -94,4 +94,38 @@ public sealed class LibraryStatisticsController : ControllerBase
     [ProducesResponseType(typeof(DuplicateReviewResetResult), StatusCodes.Status200OK)]
     public ActionResult<DuplicateReviewResetResult> ResetDuplicateReviews() =>
         Ok(_statisticsService.ResetDuplicateReviews());
+
+    /// <summary>Marks one exact per-file language set as allowed or unreviewed.</summary>
+    [HttpPost("Languages/{reviewKey}/Review")]
+    [ProducesResponseType(typeof(MediaLanguageDetail), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<MediaLanguageDetail> ReviewLanguage(string reviewKey, [FromBody] LanguageReviewRequest request)
+    {
+        MediaLanguageDetail? file = _statisticsService.SetLanguageReview(reviewKey, request);
+        return file is null ? NotFound() : Ok(file);
+    }
+
+    /// <summary>Clears all persisted per-file language review decisions.</summary>
+    [HttpPost("Languages/Reviews/Reset")]
+    [ProducesResponseType(typeof(LanguageReviewResetResult), StatusCodes.Status200OK)]
+    public ActionResult<LanguageReviewResetResult> ResetLanguageReviews() =>
+        Ok(_statisticsService.ResetLanguageReviews());
+
+    /// <summary>Marks one exact resolution-version set as allowed or unreviewed.</summary>
+    [HttpPost("Availability/{reviewKey}/Review")]
+    [ProducesResponseType(typeof(MediaAvailabilityDetail), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<MediaAvailabilityDetail> ReviewAvailability(
+        string reviewKey,
+        [FromBody] AvailabilityReviewRequest request)
+    {
+        MediaAvailabilityDetail? item = _statisticsService.SetAvailabilityReview(reviewKey, request);
+        return item is null ? NotFound() : Ok(item);
+    }
+
+    /// <summary>Clears all persisted resolution-availability review decisions.</summary>
+    [HttpPost("Availability/Reviews/Reset")]
+    [ProducesResponseType(typeof(AvailabilityReviewResetResult), StatusCodes.Status200OK)]
+    public ActionResult<AvailabilityReviewResetResult> ResetAvailabilityReviews() =>
+        Ok(_statisticsService.ResetAvailabilityReviews());
 }

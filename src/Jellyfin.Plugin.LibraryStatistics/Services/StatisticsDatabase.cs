@@ -149,6 +149,103 @@ public sealed class StatisticsDatabase
         }
     }
 
+    /// <summary>Stores an explicit language review for one exact stream-language set.</summary>
+    public void SaveLanguageReview(string reviewKey, string signature, bool allowed, string? note)
+    {
+        SaveAuditReview(state => state.LanguageReviews, reviewKey, signature, allowed, note);
+    }
+
+    /// <summary>Clears all persisted language review decisions.</summary>
+    public int ClearLanguageReviews() => ClearAuditReviews(state => state.LanguageReviews);
+
+    /// <summary>Applies saved review states to per-file language metadata.</summary>
+    public void ApplyLanguageReviews(IList<MediaLanguageDetail> files)
+    {
+        Dictionary<string, ReviewRecord> reviews;
+        lock (_sync) reviews = LoadState().LanguageReviews;
+        foreach (MediaLanguageDetail file in files)
+        {
+            string signature = LanguageReviewClassifier.Signature(file);
+            if (reviews.TryGetValue(file.ReviewKey, out ReviewRecord? review)
+                && review.VersionSignature.Equals(signature, StringComparison.Ordinal))
+            {
+                file.ReviewState = review.Allowed ? LanguageReviewStates.Allowed : LanguageReviewStates.Unreviewed;
+                file.ReviewNote = review.Note;
+            }
+            else
+            {
+                file.ReviewState = LanguageReviewStates.Unreviewed;
+                file.ReviewNote = string.Empty;
+            }
+        }
+    }
+
+    /// <summary>Stores an explicit resolution-availability review for one exact version set.</summary>
+    public void SaveAvailabilityReview(string reviewKey, string signature, bool allowed, string? note)
+    {
+        SaveAuditReview(state => state.AvailabilityReviews, reviewKey, signature, allowed, note);
+    }
+
+    /// <summary>Clears all persisted resolution-availability review decisions.</summary>
+    public int ClearAvailabilityReviews() => ClearAuditReviews(state => state.AvailabilityReviews);
+
+    /// <summary>Applies saved review states to logical media availability records.</summary>
+    public void ApplyAvailabilityReviews(IList<MediaAvailabilityDetail> items)
+    {
+        Dictionary<string, ReviewRecord> reviews;
+        lock (_sync) reviews = LoadState().AvailabilityReviews;
+        foreach (MediaAvailabilityDetail item in items)
+        {
+            string signature = AvailabilityReviewClassifier.Signature(item);
+            if (reviews.TryGetValue(item.ReviewKey, out ReviewRecord? review)
+                && review.VersionSignature.Equals(signature, StringComparison.Ordinal))
+            {
+                item.ReviewState = review.Allowed ? AvailabilityReviewStates.Allowed : AvailabilityReviewStates.Unreviewed;
+                item.ReviewNote = review.Note;
+            }
+            else
+            {
+                item.ReviewState = AvailabilityReviewStates.Unreviewed;
+                item.ReviewNote = string.Empty;
+            }
+        }
+    }
+
+    private void SaveAuditReview(
+        Func<DatabaseState, Dictionary<string, ReviewRecord>> selectReviews,
+        string reviewKey,
+        string signature,
+        bool allowed,
+        string? note)
+    {
+        lock (_sync)
+        {
+            DatabaseState state = LoadState();
+            selectReviews(state)[reviewKey] = new ReviewRecord
+            {
+                VersionSignature = signature,
+                Allowed = allowed,
+                Note = (note ?? string.Empty).Trim(),
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+            SaveState(state);
+        }
+    }
+
+    private int ClearAuditReviews(Func<DatabaseState, Dictionary<string, ReviewRecord>> selectReviews)
+    {
+        lock (_sync)
+        {
+            DatabaseState state = LoadState();
+            Dictionary<string, ReviewRecord> reviews = selectReviews(state);
+            int removed = reviews.Count;
+            if (removed == 0) return 0;
+            reviews.Clear();
+            SaveState(state);
+            return removed;
+        }
+    }
+
     private DatabaseState LoadState()
     {
         DatabaseState? state = TryLoad(_path);
@@ -211,6 +308,12 @@ public sealed class StatisticsDatabase
         state.Reviews = state.Reviews is null
             ? new Dictionary<string, ReviewRecord>(StringComparer.Ordinal)
             : new Dictionary<string, ReviewRecord>(state.Reviews, StringComparer.Ordinal);
+        state.LanguageReviews = state.LanguageReviews is null
+            ? new Dictionary<string, ReviewRecord>(StringComparer.Ordinal)
+            : new Dictionary<string, ReviewRecord>(state.LanguageReviews, StringComparer.Ordinal);
+        state.AvailabilityReviews = state.AvailabilityReviews is null
+            ? new Dictionary<string, ReviewRecord>(StringComparer.Ordinal)
+            : new Dictionary<string, ReviewRecord>(state.AvailabilityReviews, StringComparer.Ordinal);
         return state;
     }
 
@@ -219,6 +322,10 @@ public sealed class StatisticsDatabase
         public List<ScanSnapshot> Snapshots { get; set; } = [];
 
         public Dictionary<string, ReviewRecord> Reviews { get; set; } = new(StringComparer.Ordinal);
+
+        public Dictionary<string, ReviewRecord> LanguageReviews { get; set; } = new(StringComparer.Ordinal);
+
+        public Dictionary<string, ReviewRecord> AvailabilityReviews { get; set; } = new(StringComparer.Ordinal);
     }
 
     private sealed class ScanSnapshot

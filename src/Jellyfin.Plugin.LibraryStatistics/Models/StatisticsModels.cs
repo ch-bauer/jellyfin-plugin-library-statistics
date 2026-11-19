@@ -378,6 +378,129 @@ public sealed class MediaInsight
     public int FileCount { get; set; }
 }
 
+/// <summary>Per-video language metadata used by the language audit.</summary>
+public sealed class MediaLanguageDetail
+{
+    /// <summary>Gets or sets the stable path-derived review key.</summary>
+    public string ReviewKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the display title.</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the exact indexed filesystem path.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the containing library.</summary>
+    public string LibraryName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets Movie, Episode, or Other video.</summary>
+    public string MediaType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the distinct audio-language values reported by Jellyfin.</summary>
+    public List<string> AudioLanguages { get; set; } = [];
+
+    /// <summary>Gets or sets the distinct subtitle-language values reported by Jellyfin.</summary>
+    public List<string> SubtitleLanguages { get; set; } = [];
+
+    /// <summary>Gets or sets the persisted language review state.</summary>
+    public string ReviewState { get; set; } = LanguageReviewStates.Unreviewed;
+
+    /// <summary>Gets or sets an optional reviewer note.</summary>
+    public string ReviewNote { get; set; } = string.Empty;
+}
+
+/// <summary>Known per-file language review states.</summary>
+public static class LanguageReviewStates
+{
+    /// <summary>The file's language set requires review.</summary>
+    public const string Unreviewed = "Unreviewed";
+
+    /// <summary>An administrator explicitly allowed the file's language set.</summary>
+    public const string Allowed = "Allowed";
+}
+
+/// <summary>A request to change one per-file language review.</summary>
+public sealed class LanguageReviewRequest
+{
+    /// <summary>Gets or sets a value indicating whether this language set is allowed.</summary>
+    public bool Allowed { get; set; }
+
+    /// <summary>Gets or sets an optional review note.</summary>
+    public string Note { get; set; } = string.Empty;
+}
+
+/// <summary>The result of clearing all persisted language review decisions.</summary>
+public sealed class LanguageReviewResetResult
+{
+    /// <summary>Gets or sets the number of removed review records.</summary>
+    public int RemovedCount { get; set; }
+}
+
+/// <summary>One indexed version used by the resolution-availability audit.</summary>
+public sealed class MediaAvailabilityVersion
+{
+    /// <summary>Gets or sets the exact indexed filesystem path.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the classified video resolution.</summary>
+    public string Resolution { get; set; } = "Unknown";
+}
+
+/// <summary>A logical movie or episode and every indexed physical version.</summary>
+public sealed class MediaAvailabilityDetail
+{
+    /// <summary>Gets or sets the stable logical-media review key.</summary>
+    public string ReviewKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the display title.</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the containing libraries.</summary>
+    public string LibraryName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets Movie or Episode.</summary>
+    public string MediaType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the indexed physical versions.</summary>
+    public List<MediaAvailabilityVersion> Versions { get; set; } = [];
+
+    /// <summary>Gets or sets a value indicating whether every indexed version is 4K.</summary>
+    public bool IsOnly4K { get; set; }
+
+    /// <summary>Gets or sets the persisted availability review state.</summary>
+    public string ReviewState { get; set; } = AvailabilityReviewStates.Unreviewed;
+
+    /// <summary>Gets or sets an optional reviewer note.</summary>
+    public string ReviewNote { get; set; } = string.Empty;
+}
+
+/// <summary>Known resolution-availability review states.</summary>
+public static class AvailabilityReviewStates
+{
+    /// <summary>The title requires review.</summary>
+    public const string Unreviewed = "Unreviewed";
+
+    /// <summary>An administrator explicitly allowed its current version set.</summary>
+    public const string Allowed = "Allowed";
+}
+
+/// <summary>A request to change one resolution-availability review.</summary>
+public sealed class AvailabilityReviewRequest
+{
+    /// <summary>Gets or sets a value indicating whether the current version set is allowed.</summary>
+    public bool Allowed { get; set; }
+
+    /// <summary>Gets or sets an optional review note.</summary>
+    public string Note { get; set; } = string.Empty;
+}
+
+/// <summary>The result of clearing all persisted availability review decisions.</summary>
+public sealed class AvailabilityReviewResetResult
+{
+    /// <summary>Gets or sets the number of removed review records.</summary>
+    public int RemovedCount { get; set; }
+}
+
 /// <summary>The complete result of a library scan.</summary>
 public sealed class StatisticsResult
 {
@@ -401,6 +524,12 @@ public sealed class StatisticsResult
 
     /// <summary>Gets or sets whether the timeline comes from media dates or scan snapshots.</summary>
     public string GrowthTimelineSource { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets per-video audio and subtitle language metadata.</summary>
+    public List<MediaLanguageDetail> LanguageFiles { get; set; } = [];
+
+    /// <summary>Gets or sets logical movies and episodes with their indexed resolutions.</summary>
+    public List<MediaAvailabilityDetail> AvailabilityItems { get; set; } = [];
 
     /// <summary>Gets or sets movies ordered by measured size.</summary>
     public List<MediaInsight> LargestMovies { get; set; } = [];

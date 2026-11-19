@@ -149,6 +149,70 @@ public sealed class LibraryStatisticsService
         return new DuplicateReviewResetResult { RemovedCount = removed };
     }
 
+    /// <summary>Changes the explicit review state for one exact per-file language set.</summary>
+    public MediaLanguageDetail? SetLanguageReview(string reviewKey, LanguageReviewRequest request)
+    {
+        StatisticsResult? result = _store.Load();
+        MediaLanguageDetail? file = result?.LanguageFiles.FirstOrDefault(item =>
+            item.ReviewKey.Equals(reviewKey, StringComparison.Ordinal));
+        if (result is null || file is null) return null;
+
+        _database.SaveLanguageReview(
+            file.ReviewKey,
+            LanguageReviewClassifier.Signature(file),
+            request.Allowed,
+            request.Note);
+        ApplyStoredState(result);
+        _store.Save(result);
+        return result.LanguageFiles.First(item => item.ReviewKey.Equals(reviewKey, StringComparison.Ordinal));
+    }
+
+    /// <summary>Clears every persisted language review decision.</summary>
+    public LanguageReviewResetResult ResetLanguageReviews()
+    {
+        int removed = _database.ClearLanguageReviews();
+        StatisticsResult? result = _store.Load();
+        if (result is not null)
+        {
+            ApplyStoredState(result);
+            _store.Save(result);
+        }
+
+        return new LanguageReviewResetResult { RemovedCount = removed };
+    }
+
+    /// <summary>Changes the explicit review state for one exact resolution-version set.</summary>
+    public MediaAvailabilityDetail? SetAvailabilityReview(string reviewKey, AvailabilityReviewRequest request)
+    {
+        StatisticsResult? result = _store.Load();
+        MediaAvailabilityDetail? item = result?.AvailabilityItems.FirstOrDefault(candidate =>
+            candidate.ReviewKey.Equals(reviewKey, StringComparison.Ordinal));
+        if (result is null || item is null) return null;
+
+        _database.SaveAvailabilityReview(
+            item.ReviewKey,
+            AvailabilityReviewClassifier.Signature(item),
+            request.Allowed,
+            request.Note);
+        ApplyStoredState(result);
+        _store.Save(result);
+        return result.AvailabilityItems.First(candidate => candidate.ReviewKey.Equals(reviewKey, StringComparison.Ordinal));
+    }
+
+    /// <summary>Clears every persisted resolution-availability review decision.</summary>
+    public AvailabilityReviewResetResult ResetAvailabilityReviews()
+    {
+        int removed = _database.ClearAvailabilityReviews();
+        StatisticsResult? result = _store.Load();
+        if (result is not null)
+        {
+            ApplyStoredState(result);
+            _store.Save(result);
+        }
+
+        return new AvailabilityReviewResetResult { RemovedCount = removed };
+    }
+
     private StatisticsResult Scan(
         bool fullStorageScan,
         Action<ScanProgress>? reportProgress,
@@ -164,6 +228,8 @@ public sealed class LibraryStatisticsService
         List<MediaGrowthEntry> growthEntries = [];
         Dictionary<Guid, BaseItem?> entityCache = [];
         UniqueRuntimeAccumulator uniqueRuntimes = new();
+        Dictionary<string, MediaLanguageDetail> languageFiles = new(StringComparer.Ordinal);
+        Dictionary<string, MediaAvailabilityDetail> availabilityItems = new(StringComparer.Ordinal);
         HashSet<string> excluded = new(
             Plugin.Instance?.Configuration.ExcludedLibraryIds ?? [],
             StringComparer.OrdinalIgnoreCase);
@@ -219,7 +285,9 @@ public sealed class LibraryStatisticsService
                     seriesInsights,
                     growthEntries,
                     entityCache,
-                    uniqueRuntimes);
+                    uniqueRuntimes,
+                    languageFiles,
+                    availabilityItems);
                 processedItems++;
                 if (itemIndex % 25 == 0 || itemIndex == items.Count - 1)
                 {
@@ -262,10 +330,29 @@ public sealed class LibraryStatisticsService
         result.LatestSeries = BuildInsights(seriesInsights.Values, latest: true);
         result.GrowthTimeline = BuildGrowthTimeline(growthEntries);
         result.GrowthTimelineSource = "MediaDates";
+        result.LanguageFiles = languageFiles.Values
+            .OrderBy(file => file.Title, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(file => file.Path, StringComparer.Ordinal)
+            .ToList();
+        result.AvailabilityItems = availabilityItems.Values
+            .Select(item =>
+            {
+                item.Versions = item.Versions
+                    .OrderBy(version => version.Path, StringComparer.Ordinal)
+                    .ToList();
+                item.IsOnly4K = item.Versions.Count > 0
+                    && item.Versions.All(version => version.Resolution.Equals("4K", StringComparison.Ordinal));
+                return item;
+            })
+            .OrderBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.LibraryName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         stopwatch.Stop();
         result.DurationMilliseconds = stopwatch.ElapsedMilliseconds;
         result.ScannedAtUtc = DateTime.UtcNow;
         _database.ApplyReviews(result.DuplicateGroups, Plugin.Instance?.Configuration.AutoAllow4KAnd1080P ?? false);
+        _database.ApplyLanguageReviews(result.LanguageFiles);
+        _database.ApplyAvailabilityReviews(result.AvailabilityItems);
         _database.SaveSnapshot(result);
         if (result.GrowthTimeline.Count == 0)
         {
@@ -294,7 +381,9 @@ public sealed class LibraryStatisticsService
         IDictionary<Guid, MediaInsightAccumulator> seriesInsights,
         ICollection<MediaGrowthEntry> growthEntries,
         IDictionary<Guid, BaseItem?> entityCache,
-        UniqueRuntimeAccumulator uniqueRuntimes)
+        UniqueRuntimeAccumulator uniqueRuntimes,
+        IDictionary<string, MediaLanguageDetail> languageFiles,
+        IDictionary<string, MediaAvailabilityDetail> availabilityItems)
     {
         MediaKind kind = item switch
         {
@@ -321,7 +410,10 @@ public sealed class LibraryStatisticsService
         {
             if (analyzedPaths.Add(MediaSourceIdentity.PathKey(item.Path)))
             {
-                long size = AnalyzeFallback(item, kind, accumulator);
+                IReadOnlyList<MediaStream> streams = ReadStreams(item.Id);
+                long size = AnalyzeFallback(item, kind, streams, accumulator);
+                TrackLanguages(item, libraryName, item.Path, streams, kind, languageFiles);
+                TrackAvailability(item, libraryName, runtimeIdentity, item.Path, streams, kind, availabilityItems);
                 TrackMedia(item, libraryName, item.Path, size, movieInsights, seriesInsights, growthEntries, entityCache);
             }
 
@@ -340,12 +432,18 @@ public sealed class LibraryStatisticsService
                 : MeasureFile(source.Path);
             IReadOnlyList<MediaStream> streams = source.MediaStreams ?? [];
             AnalyzeSource(source.Path, source.Container, size, source.RunTimeTicks ?? item.RunTimeTicks, streams, kind, accumulator);
+            TrackLanguages(item, libraryName, source.Path, streams, kind, languageFiles);
+            TrackAvailability(item, libraryName, runtimeIdentity, source.Path, streams, kind, availabilityItems);
             TrackMedia(item, libraryName, source.Path, size, movieInsights, seriesInsights, growthEntries, entityCache);
         }
 
     }
 
-    private long AnalyzeFallback(BaseItem item, MediaKind kind, StatisticsAccumulator accumulator)
+    private long AnalyzeFallback(
+        BaseItem item,
+        MediaKind kind,
+        IReadOnlyList<MediaStream> streams,
+        StatisticsAccumulator accumulator)
     {
         if (string.IsNullOrWhiteSpace(item.Path))
         {
@@ -353,8 +451,109 @@ public sealed class LibraryStatisticsService
         }
 
         long size = MeasureFile(item.Path);
-        AnalyzeSource(item.Path, null, size, item.RunTimeTicks, ReadStreams(item.Id), kind, accumulator);
+        AnalyzeSource(item.Path, null, size, item.RunTimeTicks, streams, kind, accumulator);
         return size;
+    }
+
+    private static void TrackLanguages(
+        BaseItem item,
+        string libraryName,
+        string? path,
+        IReadOnlyList<MediaStream> streams,
+        MediaKind kind,
+        IDictionary<string, MediaLanguageDetail> languageFiles)
+    {
+        if (kind == MediaKind.Audio || string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        string key = path.Trim().TrimEnd('/');
+        if (languageFiles.ContainsKey(key))
+        {
+            return;
+        }
+
+        languageFiles[key] = new MediaLanguageDetail
+        {
+            ReviewKey = LanguageReviewClassifier.ReviewKey(path),
+            Title = MediaDisplayTitle(item),
+            Path = path,
+            LibraryName = libraryName,
+            MediaType = kind switch
+            {
+                MediaKind.Movie => "Movie",
+                MediaKind.Episode => "Episode",
+                _ => "Other video"
+            },
+            AudioLanguages = streams
+                .Where(stream => stream.Type == MediaStreamType.Audio)
+                .Select(stream => MediaClassification.Language(stream.Language))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            SubtitleLanguages = streams
+                .Where(stream => stream.Type == MediaStreamType.Subtitle)
+                .Select(stream => MediaClassification.Language(stream.Language))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+        };
+    }
+
+    private static void TrackAvailability(
+        BaseItem item,
+        string libraryName,
+        string logicalMediaKey,
+        string? path,
+        IReadOnlyList<MediaStream> streams,
+        MediaKind kind,
+        IDictionary<string, MediaAvailabilityDetail> availabilityItems)
+    {
+        if ((kind != MediaKind.Movie && kind != MediaKind.Episode) || string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        if (!availabilityItems.TryGetValue(logicalMediaKey, out MediaAvailabilityDetail? detail))
+        {
+            detail = new MediaAvailabilityDetail
+            {
+                ReviewKey = AvailabilityReviewClassifier.ReviewKey(logicalMediaKey),
+                Title = MediaDisplayTitle(item),
+                LibraryName = libraryName,
+                MediaType = kind == MediaKind.Movie ? "Movie" : "Episode"
+            };
+            availabilityItems[logicalMediaKey] = detail;
+        }
+        else if (!detail.LibraryName.Split(", ", StringSplitOptions.RemoveEmptyEntries).Contains(libraryName, StringComparer.OrdinalIgnoreCase))
+        {
+            detail.LibraryName = string.Join(", ", detail.LibraryName.Split(", ", StringSplitOptions.RemoveEmptyEntries)
+                .Append(libraryName)
+                .Order(StringComparer.OrdinalIgnoreCase));
+        }
+
+        if (detail.Versions.Any(version => version.Path.Equals(path, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        MediaStream? video = streams.FirstOrDefault(stream => stream.Type == MediaStreamType.Video);
+        detail.Versions.Add(new MediaAvailabilityVersion
+        {
+            Path = path,
+            Resolution = video is null ? "Unknown" : MediaClassification.ResolutionTier(video.Width, video.Height)
+        });
+    }
+
+    private static string MediaDisplayTitle(BaseItem item)
+    {
+        string title = item.Name ?? "Untitled";
+        if (item is not Episode episode) return title;
+        string number = episode.ParentIndexNumber.HasValue && episode.IndexNumber.HasValue
+            ? $"S{episode.ParentIndexNumber:00}E{episode.IndexNumber:00}"
+            : "Episode";
+        return $"{episode.SeriesName ?? "Unknown series"} · {number} · {title}";
     }
 
     private void TrackMedia(
@@ -853,6 +1052,13 @@ public sealed class LibraryStatisticsService
         }
 
         _database.ApplyReviews(result.DuplicateGroups, Plugin.Instance?.Configuration.AutoAllow4KAnd1080P ?? false);
+        foreach (MediaLanguageDetail file in result.LanguageFiles.Where(file => string.IsNullOrWhiteSpace(file.ReviewKey)))
+        {
+            file.ReviewKey = LanguageReviewClassifier.ReviewKey(file.Path);
+        }
+
+        _database.ApplyLanguageReviews(result.LanguageFiles);
+        _database.ApplyAvailabilityReviews(result.AvailabilityItems);
         if (!string.Equals(result.GrowthTimelineSource, "MediaDates", StringComparison.Ordinal)
             || result.GrowthTimeline.Count == 0)
         {

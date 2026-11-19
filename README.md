@@ -41,6 +41,12 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 - Series-level expandable duplicate groups with one-click approval for all duplicate
   episodes in a series, plus a confirmed reset for all manual review decisions.
 - A folder audit for allowed movie versions that still share the same parent folder.
+- A language audit grouped by exact audio or subtitle language sets, with German plus
+  English as the normal combination and dedicated views for single or unidentified languages.
+- A separate resolution-availability audit for titles without a 1080p version, with
+  4K-only, 1080p-only, 720p-only, lower-quality, unknown and mixed-quality filters.
+- Persistent language and resolution exceptions that return to review when the indexed
+  language metadata or physical version set changes.
 - A separate view for ambiguous multipart episodes.
 
 ## Merged-version duplicates
@@ -83,8 +89,11 @@ Open **Dashboard → Plugins → Library Statistics**.
   Jellyfin series entries with the same provider identity are combined into one series block.
 - Use **Folder audit** to find allowed movie versions that should be moved into separate
   folders.
+- Use **Languages** to group files by their exact audio or subtitle languages, find
+  unidentified tracks, and allow intentional German-only or other exceptions.
 - Use **Media formats** to switch the donut charts between the whole server and one
-  library.
+  library, and to audit titles by their available resolution versions. Its default
+  resolution view hides titles that have the normal 1080p option.
 
 Exclusions are stored by Jellyfin virtual-folder ID, so renaming a library does not include
 it again accidentally.
@@ -116,7 +125,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.3.0.7.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.12.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

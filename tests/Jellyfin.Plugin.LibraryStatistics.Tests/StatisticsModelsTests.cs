@@ -104,4 +104,65 @@ public sealed class StatisticsModelsTests
         Assert.Equal("Example series", series.Title);
         Assert.Equal(3, series.FileCount);
     }
+
+    [Fact]
+    public void LanguageFiles_RoundTripPerVideoLanguageSets()
+    {
+        var expected = new StatisticsResult
+        {
+            LanguageFiles =
+            [
+                new MediaLanguageDetail
+                {
+                    Title = "Example · S01E02 · Episode",
+                    Path = "/media/example/s01e02.mkv",
+                    LibraryName = "Shows",
+                    MediaType = "Episode",
+                    AudioLanguages = ["DEU", "ENG", "Unknown"],
+                    SubtitleLanguages = ["ENG"]
+                }
+            ]
+        };
+
+        var json = JsonSerializer.Serialize(expected, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var actual = JsonSerializer.Deserialize<StatisticsResult>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        var file = Assert.Single(actual!.LanguageFiles);
+        Assert.Equal("/media/example/s01e02.mkv", file.Path);
+        Assert.Equal("Episode", file.MediaType);
+        Assert.Equal(["DEU", "ENG", "Unknown"], file.AudioLanguages);
+        Assert.Equal(["ENG"], file.SubtitleLanguages);
+    }
+
+    [Fact]
+    public void AvailabilityItems_RoundTripAllIndexedQualities()
+    {
+        var expected = new StatisticsResult
+        {
+            AvailabilityItems =
+            [
+                new MediaAvailabilityDetail
+                {
+                    ReviewKey = "review-key",
+                    Title = "Example",
+                    LibraryName = "Movies",
+                    MediaType = "Movie",
+                    IsOnly4K = false,
+                    Versions =
+                    [
+                        new MediaAvailabilityVersion { Path = "/media/example-4k.mkv", Resolution = "4K" },
+                        new MediaAvailabilityVersion { Path = "/media/example-720p.mkv", Resolution = "720p" }
+                    ]
+                }
+            ]
+        };
+
+        string json = JsonSerializer.Serialize(expected, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        StatisticsResult? actual = JsonSerializer.Deserialize<StatisticsResult>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        MediaAvailabilityDetail item = Assert.Single(actual!.AvailabilityItems);
+        Assert.Equal("review-key", item.ReviewKey);
+        Assert.Equal(["4K", "720p"], item.Versions.Select(version => version.Resolution));
+        Assert.False(item.IsOnly4K);
+    }
 }
