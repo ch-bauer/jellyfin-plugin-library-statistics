@@ -13,7 +13,7 @@
         "changelog": "Moves resolution availability to its own tab and makes every audit level closed by default, collapsible and batch-allowable.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.15/library-statistics_1.3.0.15.zip",
-        "checksum": "ad8a9ca0af2615df5b1748aeb52d184b",
+        "checksum": "0ce92fb6ee18bcd8d49802b8e639ffa4",
         "timestamp": "2026-11-19T00:00:00Z"
       },
       {
