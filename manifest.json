@@ -13,7 +13,7 @@
         "changelog": "Fixes partial-season and Specials grouping, accepts Russian language sets, adds the missing-4K filter, and removes audio from media-format charts.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.16/library-statistics_1.3.0.16.zip",
-        "checksum": "4d5f0b3835648e1863b3a4104064a75a",
+        "checksum": "7120c9d90e3e5b34fd8c2cd48c2dd57c",
         "timestamp": "2026-11-19T00:00:00Z"
       },
       {
