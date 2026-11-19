@@ -49,6 +49,11 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
   4K-only, 1080p-only, 720p-only, lower-quality, unknown and mixed-quality filters.
 - Closed-by-default language, resolution, series, season and collection groups, with
   close-all controls and one-click allowance for either an exact heading or a nested group.
+- Open audit groups remain open after a review update. Group approvals are reversible,
+  and checkboxes allow several visible items to be approved or returned to review together.
+- Folder-root approval batches a whole Movies or Series root rather than an individual
+  movie or show folder; for example, an episode below `Series/The Mentalist/Season 01`
+  is assigned to the `Series` folder scope.
 - Persistent language and resolution exceptions that return to review when the indexed
   language metadata or physical version set changes.
 - Matching episodes are grouped by a whole series when every episode has the same
@@ -101,11 +106,13 @@ Open **Dashboard → Plugins → Library Statistics**.
   unidentified tracks, and allow intentional German-only or other exceptions. The
   original language is inferred from an explicitly named original track, the default
   non-German track, or the first known non-German track, in that order. Movies are the
-  default media type; Russian-only and Russian combinations are standard.
+  default media type; Russian-only and Russian combinations are standard. Use the folder
+  selector or item checkboxes to review many entries in one update.
 - Use **Resolution** to audit titles by their available resolution versions. Its default
   view hides titles that have the normal 1080p option, and a separate filter finds titles
   without 4K. Movies are the default media type. Exact quality sets such as **Only 4K**
-  are collapsible and use the same series, season and collection hierarchy.
+  are collapsible and use the same series, season and collection hierarchy. Folder and
+  selected-item batch review are available here as well.
 - Use **Media formats** to switch the format-distribution charts between the whole server
   and one library. These charts include only movies and episodes, so music, theme audio
   and generic video extras do not affect the container or format breakdowns.
