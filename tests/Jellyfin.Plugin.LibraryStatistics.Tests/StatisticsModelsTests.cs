@@ -122,6 +122,9 @@ public sealed class StatisticsModelsTests
                     AuditGroupKey = "season:example:1",
                     AuditGroupTitle = "Example — Season 1",
                     AuditGroupKind = "Season",
+                    AuditParentGroupKey = "series:example",
+                    AuditParentGroupTitle = "Example",
+                    AuditParentGroupKind = "Series",
                     AudioLanguages = ["DEU", "ENG", "Unknown"],
                     SubtitleLanguages = ["ENG"]
                 }
@@ -136,6 +139,7 @@ public sealed class StatisticsModelsTests
         Assert.Equal("Episode", file.MediaType);
         Assert.Equal("JPN", file.OriginalLanguage);
         Assert.Equal("Example — Season 1", file.AuditGroupTitle);
+        Assert.Equal("Example", file.AuditParentGroupTitle);
         Assert.Equal(["DEU", "ENG", "Unknown"], file.AudioLanguages);
         Assert.Equal(["ENG"], file.SubtitleLanguages);
     }
@@ -156,6 +160,7 @@ public sealed class StatisticsModelsTests
                     AuditGroupKey = "collection:example",
                     AuditGroupTitle = "Example Collection",
                     AuditGroupKind = "Collection",
+                    AuditParentGroupKey = string.Empty,
                     IsOnly4K = false,
                     Versions =
                     [

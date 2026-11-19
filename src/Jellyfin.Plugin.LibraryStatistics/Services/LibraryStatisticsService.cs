@@ -520,7 +520,7 @@ public sealed class LibraryStatisticsService
             return;
         }
 
-        (string groupKey, string groupTitle, string groupKind) = AuditGroup(item);
+        (string groupKey, string groupTitle, string groupKind, string parentKey, string parentTitle, string parentKind) = AuditGroup(item);
         languageFiles[key] = new MediaLanguageDetail
         {
             ReviewKey = LanguageReviewClassifier.ReviewKey(path),
@@ -536,6 +536,9 @@ public sealed class LibraryStatisticsService
             AuditGroupKey = groupKey,
             AuditGroupTitle = groupTitle,
             AuditGroupKind = groupKind,
+            AuditParentGroupKey = parentKey,
+            AuditParentGroupTitle = parentTitle,
+            AuditParentGroupKind = parentKind,
             AudioLanguages = streams
                 .Where(stream => stream.Type == MediaStreamType.Audio)
                 .Select(stream => MediaClassification.Language(stream.Language))
@@ -567,7 +570,7 @@ public sealed class LibraryStatisticsService
 
         if (!availabilityItems.TryGetValue(logicalMediaKey, out MediaAvailabilityDetail? detail))
         {
-            (string groupKey, string groupTitle, string groupKind) = AuditGroup(item);
+            (string groupKey, string groupTitle, string groupKind, string parentKey, string parentTitle, string parentKind) = AuditGroup(item);
             detail = new MediaAvailabilityDetail
             {
                 ReviewKey = AvailabilityReviewClassifier.ReviewKey(logicalMediaKey),
@@ -576,7 +579,10 @@ public sealed class LibraryStatisticsService
                 MediaType = kind == MediaKind.Movie ? "Movie" : "Episode",
                 AuditGroupKey = groupKey,
                 AuditGroupTitle = groupTitle,
-                AuditGroupKind = groupKind
+                AuditGroupKind = groupKind,
+                AuditParentGroupKey = parentKey,
+                AuditParentGroupTitle = parentTitle,
+                AuditParentGroupKind = parentKind
             };
             availabilityItems[logicalMediaKey] = detail;
         }
@@ -655,7 +661,7 @@ public sealed class LibraryStatisticsService
         || language?.Trim().Equals("deu", StringComparison.OrdinalIgnoreCase) == true
         || language?.Trim().Equals("ger", StringComparison.OrdinalIgnoreCase) == true;
 
-    internal static (string Key, string Title, string Kind) AuditGroup(BaseItem item)
+    internal static (string Key, string Title, string Kind, string ParentKey, string ParentTitle, string ParentKind) AuditGroup(BaseItem item)
     {
         if (item is Episode episode)
         {
@@ -669,16 +675,28 @@ public sealed class LibraryStatisticsService
                 int number => $"Season {number}",
                 _ => "Unknown season"
             };
-            return ($"season:{seriesKey}:{episode.ParentIndexNumber?.ToString() ?? "unknown"}", $"{seriesName} — {season}", "Season");
+            return (
+                $"season:{seriesKey}:{episode.ParentIndexNumber?.ToString() ?? "unknown"}",
+                $"{seriesName} — {season}",
+                "Season",
+                $"series:{seriesKey}",
+                seriesName,
+                "Series");
         }
 
         if (item is Movie movie && !string.IsNullOrWhiteSpace(movie.TmdbCollectionName))
         {
             string collection = movie.TmdbCollectionName.Trim();
-            return ($"collection:{DuplicateReviewClassifier.Hash(collection.ToLowerInvariant())}", collection, "Collection");
+            return (
+                $"collection:{DuplicateReviewClassifier.Hash(collection.ToLowerInvariant())}",
+                collection,
+                "Collection",
+                string.Empty,
+                string.Empty,
+                string.Empty);
         }
 
-        return (string.Empty, string.Empty, string.Empty);
+        return (string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty);
     }
 
     private void TrackMedia(
@@ -1163,6 +1181,10 @@ public sealed class LibraryStatisticsService
 
     private void ApplyStoredState(StatisticsResult result)
     {
+        result.LanguageFiles.RemoveAll(file =>
+            !file.MediaType.Equals("Movie", StringComparison.Ordinal)
+            && !file.MediaType.Equals("Episode", StringComparison.Ordinal));
+
         foreach (DuplicateGroup group in result.DuplicateGroups.Where(group => string.IsNullOrWhiteSpace(group.GroupKey)))
         {
             string legacyIdentity = string.Join(

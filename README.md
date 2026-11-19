@@ -48,8 +48,9 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
   4K-only, 1080p-only, 720p-only, lower-quality, unknown and mixed-quality filters.
 - Persistent language and resolution exceptions that return to review when the indexed
   language metadata or physical version set changes.
-- Matching episodes are grouped by season and movies by their TMDb collection metadata;
-  each matching season or collection can be allowed in one action.
+- Matching episodes are grouped by a whole series when every episode has the same
+  language or quality properties. Mixed series fall back to homogeneous seasons, while
+  movies use their TMDb collection metadata. Each matching group can be allowed in one action.
 - A separate view for ambiguous multipart episodes.
 
 ## Merged-version duplicates
@@ -98,7 +99,8 @@ Open **Dashboard → Plugins → Library Statistics**.
   non-German track, or the first known non-German track, in that order.
 - Use **Media formats** to switch the donut charts between the whole server and one
   library, and to audit titles by their available resolution versions. Its default
-  resolution view hides titles that have the normal 1080p option.
+  resolution view hides titles that have the normal 1080p option. Exact quality sets such
+  as **Only 4K** are collapsible and use the same series, season and collection hierarchy.
 
 Exclusions are stored by Jellyfin virtual-folder ID, so renaming a library does not include
 it again accidentally.
@@ -134,7 +136,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.3.0.13.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.14.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

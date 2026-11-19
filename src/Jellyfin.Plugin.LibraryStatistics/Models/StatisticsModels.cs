@@ -408,6 +408,15 @@ public sealed class MediaLanguageDetail
     /// <summary>Gets or sets Season, Collection, or an empty value.</summary>
     public string AuditGroupKind { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets a stable parent-series grouping key.</summary>
+    public string AuditParentGroupKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the parent-series display title.</summary>
+    public string AuditParentGroupTitle { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets Series or an empty value.</summary>
+    public string AuditParentGroupKind { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the distinct audio-language values reported by Jellyfin.</summary>
     public List<string> AudioLanguages { get; set; } = [];
 
@@ -494,6 +503,15 @@ public sealed class MediaAvailabilityDetail
 
     /// <summary>Gets or sets Season, Collection, or an empty value.</summary>
     public string AuditGroupKind { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a stable parent-series grouping key.</summary>
+    public string AuditParentGroupKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the parent-series display title.</summary>
+    public string AuditParentGroupTitle { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets Series or an empty value.</summary>
+    public string AuditParentGroupKind { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the indexed physical versions.</summary>
     public List<MediaAvailabilityVersion> Versions { get; set; } = [];
