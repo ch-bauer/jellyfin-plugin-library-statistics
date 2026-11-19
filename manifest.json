@@ -13,7 +13,7 @@
         "changelog": "Uses German plus the inferred original language, groups matching seasons and movie collections with batch approval, and improves scrolling.",
         "targetAbi": "10.11.11.0",
         "sourceUrl": "https://github.com/ch-bauer/jellyfin-plugin-library-statistics/releases/download/v1.3.0.13/library-statistics_1.3.0.13.zip",
-        "checksum": "56ef13bfee33847ff8de8d26ae726328",
+        "checksum": "368a4771561ea46f86f013b0d0816f0f",
         "timestamp": "2026-11-19T00:00:00Z"
       },
       {
