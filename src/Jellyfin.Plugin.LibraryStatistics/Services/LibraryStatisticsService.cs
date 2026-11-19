@@ -669,12 +669,7 @@ public sealed class LibraryStatisticsService
             string seriesKey = episode.SeriesId != Guid.Empty
                 ? episode.SeriesId.ToString("N")
                 : DuplicateReviewClassifier.Hash(seriesName.ToLowerInvariant());
-            string season = episode.ParentIndexNumber switch
-            {
-                0 => "Specials",
-                int number => $"Season {number}",
-                _ => "Unknown season"
-            };
+            string season = AuditSeasonTitle(episode.ParentIndexNumber);
             return (
                 $"season:{seriesKey}:{episode.ParentIndexNumber?.ToString() ?? "unknown"}",
                 $"{seriesName} — {season}",
@@ -698,6 +693,13 @@ public sealed class LibraryStatisticsService
 
         return (string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty);
     }
+
+    internal static string AuditSeasonTitle(int? seasonNumber) => seasonNumber switch
+    {
+        0 => "Specials",
+        int number => $"Season {number}",
+        _ => "Unknown season"
+    };
 
     private void TrackMedia(
         BaseItem item,
@@ -832,14 +834,20 @@ public sealed class LibraryStatisticsService
         StatisticsAccumulator accumulator)
     {
         accumulator.AddMedia(size, kind);
-        accumulator.AddContainer(
-            string.IsNullOrWhiteSpace(container)
-                ? MediaClassification.ContainerFromPath(path)
-                : container.ToUpperInvariant(),
-            size,
-            path);
+        bool trackMediaFormats = TracksMediaFormats(kind);
+        if (trackMediaFormats)
+        {
+            accumulator.AddContainer(
+                string.IsNullOrWhiteSpace(container)
+                    ? MediaClassification.ContainerFromPath(path)
+                    : container.ToUpperInvariant(),
+                size,
+                path);
+        }
 
-        MediaStream? videoStream = streams.FirstOrDefault(stream => stream.Type == MediaStreamType.Video);
+        MediaStream? videoStream = trackMediaFormats
+            ? streams.FirstOrDefault(stream => stream.Type == MediaStreamType.Video)
+            : null;
         if (videoStream is not null)
         {
             accumulator.AddResolution(MediaClassification.ResolutionTier(videoStream.Width, videoStream.Height), size, path);
@@ -855,25 +863,31 @@ public sealed class LibraryStatisticsService
         {
             accumulator.AddAudioCodec(codec, size, path);
             if (kind == MediaKind.Audio) accumulator.AddMusicAudioCodec(codec, size, path);
-            else accumulator.AddVideoAudioCodec(codec, size, path);
+            else if (trackMediaFormats) accumulator.AddVideoAudioCodec(codec, size, path);
         }
 
-        foreach (string language in streams
-            .Where(stream => stream.Type == MediaStreamType.Audio)
-            .Select(stream => MediaClassification.Language(stream.Language))
-            .Distinct(StringComparer.OrdinalIgnoreCase))
+        if (trackMediaFormats)
         {
-            accumulator.AddAudioLanguage(language, size, path);
-        }
+            foreach (string language in streams
+                .Where(stream => stream.Type == MediaStreamType.Audio)
+                .Select(stream => MediaClassification.Language(stream.Language))
+                .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                accumulator.AddAudioLanguage(language, size, path);
+            }
 
-        foreach (string language in streams
-            .Where(stream => stream.Type == MediaStreamType.Subtitle)
-            .Select(stream => MediaClassification.Language(stream.Language))
-            .Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            accumulator.AddSubtitleLanguage(language, size, path);
+            foreach (string language in streams
+                .Where(stream => stream.Type == MediaStreamType.Subtitle)
+                .Select(stream => MediaClassification.Language(stream.Language))
+                .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                accumulator.AddSubtitleLanguage(language, size, path);
+            }
         }
     }
+
+    internal static bool TracksMediaFormats(MediaKind kind) =>
+        kind is MediaKind.Movie or MediaKind.Episode;
 
     private string? TrackDuplicateCandidate(
         BaseItem item,

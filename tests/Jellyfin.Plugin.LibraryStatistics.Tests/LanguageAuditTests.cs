@@ -35,6 +35,23 @@ public sealed class LanguageAuditTests
         Assert.Equal("DEU", LibraryStatisticsService.InferOriginalLanguage([Audio("DEU")]));
     }
 
+    [Fact]
+    public void AuditGroup_TreatsSeasonZeroAsSpecials()
+    {
+        Assert.Equal("Specials", LibraryStatisticsService.AuditSeasonTitle(0));
+        Assert.Equal("Season 2", LibraryStatisticsService.AuditSeasonTitle(2));
+        Assert.Equal("Unknown season", LibraryStatisticsService.AuditSeasonTitle(null));
+    }
+
+    [Fact]
+    public void MediaFormats_IncludeOnlyMoviesAndEpisodes()
+    {
+        Assert.True(LibraryStatisticsService.TracksMediaFormats(MediaKind.Movie));
+        Assert.True(LibraryStatisticsService.TracksMediaFormats(MediaKind.Episode));
+        Assert.False(LibraryStatisticsService.TracksMediaFormats(MediaKind.OtherVideo));
+        Assert.False(LibraryStatisticsService.TracksMediaFormats(MediaKind.Audio));
+    }
+
     private static (string? Language, bool IsDefault, string? Title) Audio(
         string language,
         bool isDefault = false,

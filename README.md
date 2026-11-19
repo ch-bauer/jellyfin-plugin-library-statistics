@@ -44,6 +44,7 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 - A language audit grouped by exact audio or subtitle language sets, with German plus
   the inferred original language as the normal combination and dedicated expandable
   views for single or unidentified languages.
+- Russian-only and Russian plus any additional language are also treated as standard.
 - A separate resolution-availability audit for titles without a 1080p version, with
   4K-only, 1080p-only, 720p-only, lower-quality, unknown and mixed-quality filters.
 - Closed-by-default language, resolution, series, season and collection groups, with
@@ -51,8 +52,9 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
 - Persistent language and resolution exceptions that return to review when the indexed
   language metadata or physical version set changes.
 - Matching episodes are grouped by a whole series when every episode has the same
-  language or quality properties. Mixed series fall back to homogeneous seasons, while
-  movies use their TMDb collection metadata. Each matching group can be allowed in one action.
+  language or quality properties. Mixed series fall back to matching full or partial
+  seasons, including Specials, while movies use matching subsets of their TMDb collection.
+  Each matching group can be allowed in one action.
 - A separate view for ambiguous multipart episodes.
 
 ## Merged-version duplicates
@@ -98,12 +100,15 @@ Open **Dashboard → Plugins → Library Statistics**.
 - Use **Languages** to group files by their exact audio or subtitle languages, find
   unidentified tracks, and allow intentional German-only or other exceptions. The
   original language is inferred from an explicitly named original track, the default
-  non-German track, or the first known non-German track, in that order.
+  non-German track, or the first known non-German track, in that order. Movies are the
+  default media type; Russian-only and Russian combinations are standard.
 - Use **Resolution** to audit titles by their available resolution versions. Its default
-  view hides titles that have the normal 1080p option. Exact quality sets such as
-  **Only 4K** are collapsible and use the same series, season and collection hierarchy.
+  view hides titles that have the normal 1080p option, and a separate filter finds titles
+  without 4K. Movies are the default media type. Exact quality sets such as **Only 4K**
+  are collapsible and use the same series, season and collection hierarchy.
 - Use **Media formats** to switch the format-distribution charts between the whole server
-  and one library.
+  and one library. These charts include only movies and episodes, so music, theme audio
+  and generic video extras do not affect the container or format breakdowns.
 
 Exclusions are stored by Jellyfin virtual-folder ID, so renaming a library does not include
 it again accidentally.
