@@ -105,6 +105,16 @@ public sealed class LibraryStatisticsController : ControllerBase
         return file is null ? NotFound() : Ok(file);
     }
 
+    /// <summary>Marks several exact per-file language sets as allowed or unreviewed.</summary>
+    [HttpPost("Languages/ReviewBatch")]
+    [ProducesResponseType(typeof(IReadOnlyList<MediaLanguageDetail>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<IReadOnlyList<MediaLanguageDetail>> ReviewLanguages([FromBody] LanguageReviewBatchRequest request)
+    {
+        IReadOnlyList<MediaLanguageDetail>? files = _statisticsService.SetLanguageReviews(request);
+        return files is null ? NotFound() : Ok(files);
+    }
+
     /// <summary>Clears all persisted per-file language review decisions.</summary>
     [HttpPost("Languages/Reviews/Reset")]
     [ProducesResponseType(typeof(LanguageReviewResetResult), StatusCodes.Status200OK)]
@@ -121,6 +131,17 @@ public sealed class LibraryStatisticsController : ControllerBase
     {
         MediaAvailabilityDetail? item = _statisticsService.SetAvailabilityReview(reviewKey, request);
         return item is null ? NotFound() : Ok(item);
+    }
+
+    /// <summary>Marks several exact resolution-version sets as allowed or unreviewed.</summary>
+    [HttpPost("Availability/ReviewBatch")]
+    [ProducesResponseType(typeof(IReadOnlyList<MediaAvailabilityDetail>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<IReadOnlyList<MediaAvailabilityDetail>> ReviewAvailabilityBatch(
+        [FromBody] AvailabilityReviewBatchRequest request)
+    {
+        IReadOnlyList<MediaAvailabilityDetail>? items = _statisticsService.SetAvailabilityReviews(request);
+        return items is null ? NotFound() : Ok(items);
     }
 
     /// <summary>Clears all persisted resolution-availability review decisions.</summary>

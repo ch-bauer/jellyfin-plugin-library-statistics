@@ -9,7 +9,7 @@ internal sealed class UniqueRuntimeAccumulator
 
     internal void Add(MediaKind kind, string identity, IEnumerable<long?> runtimeCandidates)
     {
-        if (kind == MediaKind.Audio || string.IsNullOrWhiteSpace(identity))
+        if ((kind != MediaKind.Movie && kind != MediaKind.Episode) || string.IsNullOrWhiteSpace(identity))
         {
             return;
         }

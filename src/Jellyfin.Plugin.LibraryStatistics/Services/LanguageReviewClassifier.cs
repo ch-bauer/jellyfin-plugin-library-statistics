@@ -9,6 +9,7 @@ internal static class LanguageReviewClassifier
 
     internal static string Signature(MediaLanguageDetail file) => DuplicateReviewClassifier.Hash(string.Join(
         "\n",
+        file.OriginalLanguage.Trim(),
         string.Join('\u001f', file.AudioLanguages.Order(StringComparer.OrdinalIgnoreCase)),
         string.Join('\u001f', file.SubtitleLanguages.Order(StringComparer.OrdinalIgnoreCase))));
 }

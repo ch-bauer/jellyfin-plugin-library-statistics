@@ -42,11 +42,14 @@ recommendation, discovery, Arr/Seerr or web-client modification features.
   episodes in a series, plus a confirmed reset for all manual review decisions.
 - A folder audit for allowed movie versions that still share the same parent folder.
 - A language audit grouped by exact audio or subtitle language sets, with German plus
-  English as the normal combination and dedicated views for single or unidentified languages.
+  the inferred original language as the normal combination and dedicated expandable
+  views for single or unidentified languages.
 - A separate resolution-availability audit for titles without a 1080p version, with
   4K-only, 1080p-only, 720p-only, lower-quality, unknown and mixed-quality filters.
 - Persistent language and resolution exceptions that return to review when the indexed
   language metadata or physical version set changes.
+- Matching episodes are grouped by season and movies by their TMDb collection metadata;
+  each matching season or collection can be allowed in one action.
 - A separate view for ambiguous multipart episodes.
 
 ## Merged-version duplicates
@@ -90,13 +93,19 @@ Open **Dashboard → Plugins → Library Statistics**.
 - Use **Folder audit** to find allowed movie versions that should be moved into separate
   folders.
 - Use **Languages** to group files by their exact audio or subtitle languages, find
-  unidentified tracks, and allow intentional German-only or other exceptions.
+  unidentified tracks, and allow intentional German-only or other exceptions. The
+  original language is inferred from an explicitly named original track, the default
+  non-German track, or the first known non-German track, in that order.
 - Use **Media formats** to switch the donut charts between the whole server and one
   library, and to audit titles by their available resolution versions. Its default
   resolution view hides titles that have the normal 1080p option.
 
 Exclusions are stored by Jellyfin virtual-folder ID, so renaming a library does not include
 it again accidentally.
+
+Language, resolution and total-runtime audits include only Jellyfin movies and episodes.
+Season-zero specials remain included; generic videos such as featurettes and
+behind-the-scenes material are excluded.
 
 ## Install from the plugin repository
 
@@ -125,7 +134,7 @@ Requires the .NET 9 SDK.
 ./build.ps1
 ```
 
-The script runs the test suite and creates `dist/library-statistics_1.3.0.12.zip`.
+The script runs the test suite and creates `dist/library-statistics_1.3.0.13.zip`.
 
 GitHub Actions restores, builds, tests and retains an artifact for every push and pull
 request. Pushing a matching `v*` tag builds the minimal Jellyfin zip, creates the GitHub

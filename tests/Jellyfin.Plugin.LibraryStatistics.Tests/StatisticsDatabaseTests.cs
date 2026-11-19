@@ -182,6 +182,47 @@ public sealed class StatisticsDatabaseTests
             AvailabilityReviewClassifier.Signature(lower));
     }
 
+    [Fact]
+    public void Database_SavesLanguageAndAvailabilityGroupReviewsInOneBatch()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "library-statistics-db-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var database = new StatisticsDatabase(directory, NullLogger<StatisticsDatabase>.Instance);
+            MediaLanguageDetail[] languages =
+            [
+                new() { ReviewKey = "language-one", Path = "/media/show/s01e01.mkv", OriginalLanguage = "JPN", AudioLanguages = ["DEU", "JPN"] },
+                new() { ReviewKey = "language-two", Path = "/media/show/s01e02.mkv", OriginalLanguage = "JPN", AudioLanguages = ["DEU", "JPN"] }
+            ];
+            MediaAvailabilityDetail[] availability =
+            [
+                new() { ReviewKey = "quality-one", Versions = [new MediaAvailabilityVersion { Path = "/media/show/s01e01.mkv", Resolution = "720p" }] },
+                new() { ReviewKey = "quality-two", Versions = [new MediaAvailabilityVersion { Path = "/media/show/s01e02.mkv", Resolution = "720p" }] }
+            ];
+
+            database.SaveLanguageReviews(
+                languages.Select(file => (file.ReviewKey, LanguageReviewClassifier.Signature(file))),
+                true,
+                "season");
+            database.SaveAvailabilityReviews(
+                availability.Select(item => (item.ReviewKey, AvailabilityReviewClassifier.Signature(item))),
+                true,
+                "season");
+            database.ApplyLanguageReviews(languages);
+            database.ApplyAvailabilityReviews(availability);
+
+            Assert.All(languages, file => Assert.Equal(LanguageReviewStates.Allowed, file.ReviewState));
+            Assert.All(availability, item => Assert.Equal(AvailabilityReviewStates.Allowed, item.ReviewState));
+            Assert.Equal(2, database.ClearLanguageReviews());
+            Assert.Equal(2, database.ClearAvailabilityReviews());
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
     private static StatisticsResult Result(long size) => new()
     {
         ScannedAtUtc = new DateTime(2026, 10, 22, 10, 0, 0, DateTimeKind.Utc),

@@ -167,6 +167,29 @@ public sealed class LibraryStatisticsService
         return result.LanguageFiles.First(item => item.ReviewKey.Equals(reviewKey, StringComparison.Ordinal));
     }
 
+    /// <summary>Changes the explicit review state for several exact per-file language sets.</summary>
+    public IReadOnlyList<MediaLanguageDetail>? SetLanguageReviews(LanguageReviewBatchRequest request)
+    {
+        StatisticsResult? result = _store.Load();
+        if (result is null) return null;
+
+        HashSet<string> keys = new(
+            request.ReviewKeys.Where(key => !string.IsNullOrWhiteSpace(key)),
+            StringComparer.Ordinal);
+        List<MediaLanguageDetail> files = result.LanguageFiles
+            .Where(file => keys.Contains(file.ReviewKey))
+            .ToList();
+        if (keys.Count == 0 || files.Count != keys.Count) return null;
+
+        _database.SaveLanguageReviews(
+            files.Select(file => (file.ReviewKey, LanguageReviewClassifier.Signature(file))),
+            request.Allowed,
+            request.Note);
+        ApplyStoredState(result);
+        _store.Save(result);
+        return files;
+    }
+
     /// <summary>Clears every persisted language review decision.</summary>
     public LanguageReviewResetResult ResetLanguageReviews()
     {
@@ -197,6 +220,29 @@ public sealed class LibraryStatisticsService
         ApplyStoredState(result);
         _store.Save(result);
         return result.AvailabilityItems.First(candidate => candidate.ReviewKey.Equals(reviewKey, StringComparison.Ordinal));
+    }
+
+    /// <summary>Changes the explicit review state for several exact resolution-version sets.</summary>
+    public IReadOnlyList<MediaAvailabilityDetail>? SetAvailabilityReviews(AvailabilityReviewBatchRequest request)
+    {
+        StatisticsResult? result = _store.Load();
+        if (result is null) return null;
+
+        HashSet<string> keys = new(
+            request.ReviewKeys.Where(key => !string.IsNullOrWhiteSpace(key)),
+            StringComparer.Ordinal);
+        List<MediaAvailabilityDetail> items = result.AvailabilityItems
+            .Where(item => keys.Contains(item.ReviewKey))
+            .ToList();
+        if (keys.Count == 0 || items.Count != keys.Count) return null;
+
+        _database.SaveAvailabilityReviews(
+            items.Select(item => (item.ReviewKey, AvailabilityReviewClassifier.Signature(item))),
+            request.Allowed,
+            request.Note);
+        ApplyStoredState(result);
+        _store.Save(result);
+        return items;
     }
 
     /// <summary>Clears every persisted resolution-availability review decision.</summary>
@@ -463,7 +509,7 @@ public sealed class LibraryStatisticsService
         MediaKind kind,
         IDictionary<string, MediaLanguageDetail> languageFiles)
     {
-        if (kind == MediaKind.Audio || string.IsNullOrWhiteSpace(path))
+        if ((kind != MediaKind.Movie && kind != MediaKind.Episode) || string.IsNullOrWhiteSpace(path))
         {
             return;
         }
@@ -474,6 +520,7 @@ public sealed class LibraryStatisticsService
             return;
         }
 
+        (string groupKey, string groupTitle, string groupKind) = AuditGroup(item);
         languageFiles[key] = new MediaLanguageDetail
         {
             ReviewKey = LanguageReviewClassifier.ReviewKey(path),
@@ -483,9 +530,12 @@ public sealed class LibraryStatisticsService
             MediaType = kind switch
             {
                 MediaKind.Movie => "Movie",
-                MediaKind.Episode => "Episode",
-                _ => "Other video"
+                _ => "Episode"
             },
+            OriginalLanguage = InferOriginalLanguage(streams),
+            AuditGroupKey = groupKey,
+            AuditGroupTitle = groupTitle,
+            AuditGroupKind = groupKind,
             AudioLanguages = streams
                 .Where(stream => stream.Type == MediaStreamType.Audio)
                 .Select(stream => MediaClassification.Language(stream.Language))
@@ -517,12 +567,16 @@ public sealed class LibraryStatisticsService
 
         if (!availabilityItems.TryGetValue(logicalMediaKey, out MediaAvailabilityDetail? detail))
         {
+            (string groupKey, string groupTitle, string groupKind) = AuditGroup(item);
             detail = new MediaAvailabilityDetail
             {
                 ReviewKey = AvailabilityReviewClassifier.ReviewKey(logicalMediaKey),
                 Title = MediaDisplayTitle(item),
                 LibraryName = libraryName,
-                MediaType = kind == MediaKind.Movie ? "Movie" : "Episode"
+                MediaType = kind == MediaKind.Movie ? "Movie" : "Episode",
+                AuditGroupKey = groupKey,
+                AuditGroupTitle = groupTitle,
+                AuditGroupKind = groupKind
             };
             availabilityItems[logicalMediaKey] = detail;
         }
@@ -554,6 +608,77 @@ public sealed class LibraryStatisticsService
             ? $"S{episode.ParentIndexNumber:00}E{episode.IndexNumber:00}"
             : "Episode";
         return $"{episode.SeriesName ?? "Unknown series"} · {number} · {title}";
+    }
+
+    private static string InferOriginalLanguage(IReadOnlyList<MediaStream> streams) => InferOriginalLanguage(
+        streams
+            .Where(stream => stream.Type == MediaStreamType.Audio)
+            .Select(stream => ((string?)stream.Language, stream.IsDefault, (string?)stream.Title))
+            .ToList());
+
+    internal static string InferOriginalLanguage(
+        IReadOnlyList<(string? Language, bool IsDefault, string? Title)> audio)
+    {
+        (string? Language, bool IsDefault, string? Title) original = audio.FirstOrDefault(stream =>
+                IsKnownLanguage(stream.Language)
+                && (stream.Title?.Contains("original", StringComparison.OrdinalIgnoreCase) ?? false));
+        if (original.Language is null)
+        {
+            original = audio.FirstOrDefault(stream => stream.IsDefault && IsKnownLanguage(stream.Language) && !IsGerman(stream.Language));
+        }
+
+        if (original.Language is null)
+        {
+            original = audio.FirstOrDefault(stream => IsKnownLanguage(stream.Language) && !IsGerman(stream.Language));
+        }
+
+        if (original.Language is null)
+        {
+            original = audio.FirstOrDefault(stream => IsKnownLanguage(stream.Language));
+        }
+
+        if (original.Language is null)
+        {
+            original = audio.FirstOrDefault();
+        }
+
+        return MediaClassification.Language(original.Language);
+    }
+
+    private static bool IsKnownLanguage(string? language) =>
+        !string.IsNullOrWhiteSpace(language)
+        && !language.Equals("und", StringComparison.OrdinalIgnoreCase)
+        && !language.Equals("unknown", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGerman(string? language) =>
+        language?.Trim().Equals("de", StringComparison.OrdinalIgnoreCase) == true
+        || language?.Trim().Equals("deu", StringComparison.OrdinalIgnoreCase) == true
+        || language?.Trim().Equals("ger", StringComparison.OrdinalIgnoreCase) == true;
+
+    internal static (string Key, string Title, string Kind) AuditGroup(BaseItem item)
+    {
+        if (item is Episode episode)
+        {
+            string seriesName = episode.SeriesName ?? "Unknown series";
+            string seriesKey = episode.SeriesId != Guid.Empty
+                ? episode.SeriesId.ToString("N")
+                : DuplicateReviewClassifier.Hash(seriesName.ToLowerInvariant());
+            string season = episode.ParentIndexNumber switch
+            {
+                0 => "Specials",
+                int number => $"Season {number}",
+                _ => "Unknown season"
+            };
+            return ($"season:{seriesKey}:{episode.ParentIndexNumber?.ToString() ?? "unknown"}", $"{seriesName} — {season}", "Season");
+        }
+
+        if (item is Movie movie && !string.IsNullOrWhiteSpace(movie.TmdbCollectionName))
+        {
+            string collection = movie.TmdbCollectionName.Trim();
+            return ($"collection:{DuplicateReviewClassifier.Hash(collection.ToLowerInvariant())}", collection, "Collection");
+        }
+
+        return (string.Empty, string.Empty, string.Empty);
     }
 
     private void TrackMedia(

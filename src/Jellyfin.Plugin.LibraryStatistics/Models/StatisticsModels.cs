@@ -393,8 +393,20 @@ public sealed class MediaLanguageDetail
     /// <summary>Gets or sets the containing library.</summary>
     public string LibraryName { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets Movie, Episode, or Other video.</summary>
+    /// <summary>Gets or sets Movie or Episode.</summary>
     public string MediaType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the original audio language inferred from Jellyfin's stream order and default flag.</summary>
+    public string OriginalLanguage { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a stable season or movie-collection grouping key.</summary>
+    public string AuditGroupKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the season or movie-collection display title.</summary>
+    public string AuditGroupTitle { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets Season, Collection, or an empty value.</summary>
+    public string AuditGroupKind { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the distinct audio-language values reported by Jellyfin.</summary>
     public List<string> AudioLanguages { get; set; } = [];
@@ -423,6 +435,19 @@ public static class LanguageReviewStates
 public sealed class LanguageReviewRequest
 {
     /// <summary>Gets or sets a value indicating whether this language set is allowed.</summary>
+    public bool Allowed { get; set; }
+
+    /// <summary>Gets or sets an optional review note.</summary>
+    public string Note { get; set; } = string.Empty;
+}
+
+/// <summary>A request to change several exact per-file language reviews together.</summary>
+public sealed class LanguageReviewBatchRequest
+{
+    /// <summary>Gets or sets the per-file review keys to update.</summary>
+    public List<string> ReviewKeys { get; set; } = [];
+
+    /// <summary>Gets or sets a value indicating whether these language sets are allowed.</summary>
     public bool Allowed { get; set; }
 
     /// <summary>Gets or sets an optional review note.</summary>
@@ -461,6 +486,15 @@ public sealed class MediaAvailabilityDetail
     /// <summary>Gets or sets Movie or Episode.</summary>
     public string MediaType { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets a stable season or movie-collection grouping key.</summary>
+    public string AuditGroupKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the season or movie-collection display title.</summary>
+    public string AuditGroupTitle { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets Season, Collection, or an empty value.</summary>
+    public string AuditGroupKind { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the indexed physical versions.</summary>
     public List<MediaAvailabilityVersion> Versions { get; set; } = [];
 
@@ -488,6 +522,19 @@ public static class AvailabilityReviewStates
 public sealed class AvailabilityReviewRequest
 {
     /// <summary>Gets or sets a value indicating whether the current version set is allowed.</summary>
+    public bool Allowed { get; set; }
+
+    /// <summary>Gets or sets an optional review note.</summary>
+    public string Note { get; set; } = string.Empty;
+}
+
+/// <summary>A request to change several exact resolution-availability reviews together.</summary>
+public sealed class AvailabilityReviewBatchRequest
+{
+    /// <summary>Gets or sets the logical-media review keys to update.</summary>
+    public List<string> ReviewKeys { get; set; } = [];
+
+    /// <summary>Gets or sets a value indicating whether these version sets are allowed.</summary>
     public bool Allowed { get; set; }
 
     /// <summary>Gets or sets an optional review note.</summary>

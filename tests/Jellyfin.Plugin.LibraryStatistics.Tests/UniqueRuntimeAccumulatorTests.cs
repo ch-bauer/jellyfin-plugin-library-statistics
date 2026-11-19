@@ -31,13 +31,13 @@ public sealed class UniqueRuntimeAccumulatorTests
     }
 
     [Fact]
-    public void Add_ExcludesAudioRuntime()
+    public void Add_ExcludesAudioAndGenericVideoRuntime()
     {
         var accumulator = new UniqueRuntimeAccumulator();
 
         accumulator.Add(MediaKind.Audio, "audio:track", [TimeSpan.FromMinutes(4).Ticks]);
         accumulator.Add(MediaKind.OtherVideo, "video:extra", [TimeSpan.FromMinutes(20).Ticks]);
 
-        Assert.Equal(TimeSpan.FromMinutes(20).Ticks, accumulator.TotalTicks);
+        Assert.Equal(0, accumulator.TotalTicks);
     }
 }

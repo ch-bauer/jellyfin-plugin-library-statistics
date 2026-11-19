@@ -152,8 +152,14 @@ public sealed class StatisticsDatabase
     /// <summary>Stores an explicit language review for one exact stream-language set.</summary>
     public void SaveLanguageReview(string reviewKey, string signature, bool allowed, string? note)
     {
-        SaveAuditReview(state => state.LanguageReviews, reviewKey, signature, allowed, note);
+        SaveLanguageReviews([(reviewKey, signature)], allowed, note);
     }
+
+    /// <summary>Stores language reviews for several exact stream-language sets in one transaction.</summary>
+    internal void SaveLanguageReviews(
+        IEnumerable<(string ReviewKey, string Signature)> reviews,
+        bool allowed,
+        string? note) => SaveAuditReviews(state => state.LanguageReviews, reviews, allowed, note);
 
     /// <summary>Clears all persisted language review decisions.</summary>
     public int ClearLanguageReviews() => ClearAuditReviews(state => state.LanguageReviews);
@@ -183,8 +189,14 @@ public sealed class StatisticsDatabase
     /// <summary>Stores an explicit resolution-availability review for one exact version set.</summary>
     public void SaveAvailabilityReview(string reviewKey, string signature, bool allowed, string? note)
     {
-        SaveAuditReview(state => state.AvailabilityReviews, reviewKey, signature, allowed, note);
+        SaveAvailabilityReviews([(reviewKey, signature)], allowed, note);
     }
+
+    /// <summary>Stores availability reviews for several exact version sets in one transaction.</summary>
+    internal void SaveAvailabilityReviews(
+        IEnumerable<(string ReviewKey, string Signature)> reviews,
+        bool allowed,
+        string? note) => SaveAuditReviews(state => state.AvailabilityReviews, reviews, allowed, note);
 
     /// <summary>Clears all persisted resolution-availability review decisions.</summary>
     public int ClearAvailabilityReviews() => ClearAuditReviews(state => state.AvailabilityReviews);
@@ -211,23 +223,29 @@ public sealed class StatisticsDatabase
         }
     }
 
-    private void SaveAuditReview(
+    private void SaveAuditReviews(
         Func<DatabaseState, Dictionary<string, ReviewRecord>> selectReviews,
-        string reviewKey,
-        string signature,
+        IEnumerable<(string ReviewKey, string Signature)> reviews,
         bool allowed,
         string? note)
     {
         lock (_sync)
         {
             DatabaseState state = LoadState();
-            selectReviews(state)[reviewKey] = new ReviewRecord
+            Dictionary<string, ReviewRecord> target = selectReviews(state);
+            string cleanNote = (note ?? string.Empty).Trim();
+            DateTime updatedAtUtc = DateTime.UtcNow;
+            foreach ((string reviewKey, string signature) in reviews)
             {
-                VersionSignature = signature,
-                Allowed = allowed,
-                Note = (note ?? string.Empty).Trim(),
-                UpdatedAtUtc = DateTime.UtcNow
-            };
+                target[reviewKey] = new ReviewRecord
+                {
+                    VersionSignature = signature,
+                    Allowed = allowed,
+                    Note = cleanNote,
+                    UpdatedAtUtc = updatedAtUtc
+                };
+            }
+
             SaveState(state);
         }
     }

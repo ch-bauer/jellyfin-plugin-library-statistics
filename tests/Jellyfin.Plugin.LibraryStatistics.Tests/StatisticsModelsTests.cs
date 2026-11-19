@@ -118,6 +118,10 @@ public sealed class StatisticsModelsTests
                     Path = "/media/example/s01e02.mkv",
                     LibraryName = "Shows",
                     MediaType = "Episode",
+                    OriginalLanguage = "JPN",
+                    AuditGroupKey = "season:example:1",
+                    AuditGroupTitle = "Example — Season 1",
+                    AuditGroupKind = "Season",
                     AudioLanguages = ["DEU", "ENG", "Unknown"],
                     SubtitleLanguages = ["ENG"]
                 }
@@ -130,6 +134,8 @@ public sealed class StatisticsModelsTests
         var file = Assert.Single(actual!.LanguageFiles);
         Assert.Equal("/media/example/s01e02.mkv", file.Path);
         Assert.Equal("Episode", file.MediaType);
+        Assert.Equal("JPN", file.OriginalLanguage);
+        Assert.Equal("Example — Season 1", file.AuditGroupTitle);
         Assert.Equal(["DEU", "ENG", "Unknown"], file.AudioLanguages);
         Assert.Equal(["ENG"], file.SubtitleLanguages);
     }
@@ -147,6 +153,9 @@ public sealed class StatisticsModelsTests
                     Title = "Example",
                     LibraryName = "Movies",
                     MediaType = "Movie",
+                    AuditGroupKey = "collection:example",
+                    AuditGroupTitle = "Example Collection",
+                    AuditGroupKind = "Collection",
                     IsOnly4K = false,
                     Versions =
                     [
@@ -162,6 +171,7 @@ public sealed class StatisticsModelsTests
 
         MediaAvailabilityDetail item = Assert.Single(actual!.AvailabilityItems);
         Assert.Equal("review-key", item.ReviewKey);
+        Assert.Equal("Example Collection", item.AuditGroupTitle);
         Assert.Equal(["4K", "720p"], item.Versions.Select(version => version.Resolution));
         Assert.False(item.IsOnly4K);
     }
